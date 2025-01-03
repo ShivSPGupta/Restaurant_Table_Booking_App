@@ -21,7 +21,7 @@ export default function Home() {
 
     const checkAvailability = async () => {
         try {
-            const response = await axios.post('http://localhost:5000/api/check-availability', {
+            const response = await axios.post('https://restaurant-table-booking-app-back.vercel.app/api/check-availability', {
                 date: formData.date,
                 time: formData.time,
             });
@@ -41,7 +41,7 @@ export default function Home() {
     const handleBooking = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post('http://localhost:5000/api/book-table', formData);
+            const response = await axios.post('https://restaurant-table-booking-app-back.vercel.app/api/book-table', formData);
             setBookingSummary(response.data);
             setAvailabilityMessage('');
             setAvailableSlots([]);
