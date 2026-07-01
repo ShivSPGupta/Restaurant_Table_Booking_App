@@ -2,20 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background: #f5f0e8;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-} */
+@layer components {
+  .booking-input {
+    @apply block w-full rounded-lg border border-[#d7c7b2] bg-white px-3 py-3 text-sm text-[#211b18] shadow-sm outline-none transition placeholder:text-[#a38f78] focus:border-[#255647] focus:ring-4 focus:ring-[#255647]/10;
+  }
+}
