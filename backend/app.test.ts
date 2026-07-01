@@ -1,21 +1,32 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const fs = require("fs");
-const os = require("os");
-const path = require("path");
+import assert from "node:assert/strict";
+import fs from "fs";
+import type { Express } from "express";
+import http from "http";
+import os from "os";
+import path from "path";
+import test from "node:test";
+
+type TestResponse<TBody = Record<string, unknown>> = {
+  statusCode: number;
+  body: TBody;
+};
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "restaurant-booking-"));
 process.env.DATA_DIR = tempDir;
+const app = require("./app").default as Express;
 
-const app = require("./app");
-
-function makeRequest(pathname, method, body) {
+function makeRequest<TBody = Record<string, unknown>>(
+  pathname: string,
+  method: string,
+  body?: Record<string, unknown>
+): Promise<TestResponse<TBody>> {
   return new Promise((resolve, reject) => {
     const server = app.listen(0, () => {
-      const port = server.address().port;
+      const address = server.address();
+      const port = typeof address === "object" && address ? address.port : 0;
       const payload = body ? JSON.stringify(body) : undefined;
 
-      const request = require("http").request(
+      const request = http.request(
         {
           hostname: "127.0.0.1",
           port,
@@ -37,7 +48,7 @@ function makeRequest(pathname, method, body) {
           response.on("end", () => {
             server.close(() => {
               resolve({
-                statusCode: response.statusCode,
+                statusCode: response.statusCode || 500,
                 body: responseBody ? JSON.parse(responseBody) : null,
               });
             });
@@ -63,17 +74,21 @@ test.beforeEach(() => {
 });
 
 test("health endpoint responds successfully", async () => {
-  const response = await makeRequest("/api/health", "GET");
+  const response = await makeRequest<{ ok: boolean }>("/api/health", "GET");
 
   assert.equal(response.statusCode, 200);
   assert.deepEqual(response.body, { ok: true });
 });
 
 test("availability is true before a reservation exists", async () => {
-  const response = await makeRequest("/api/check-availability", "POST", {
-    date: "2026-07-15",
-    time: "19:00",
-  });
+  const response = await makeRequest<{ available: boolean; slots: string[] }>(
+    "/api/check-availability",
+    "POST",
+    {
+      date: "2026-07-15",
+      time: "19:00",
+    }
+  );
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.available, true);
@@ -89,7 +104,11 @@ test("booking a table persists the reservation", async () => {
     contact: "9999999999",
   };
 
-  const response = await makeRequest("/api/book-table", "POST", booking);
+  const response = await makeRequest<{ guests: number }>(
+    "/api/book-table",
+    "POST",
+    booking
+  );
 
   assert.equal(response.statusCode, 201);
   assert.equal(response.body.guests, 4);
@@ -111,7 +130,11 @@ test("duplicate bookings are rejected", async () => {
   };
 
   await makeRequest("/api/book-table", "POST", booking);
-  const response = await makeRequest("/api/book-table", "POST", booking);
+  const response = await makeRequest<{ error: string }>(
+    "/api/book-table",
+    "POST",
+    booking
+  );
 
   assert.equal(response.statusCode, 409);
   assert.equal(response.body.error, "This time slot is already booked.");

@@ -1,13 +1,16 @@
 "use client";
 
+import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { useState } from "react";
 import {
   bookTable,
   checkAvailability,
   getApiErrorMessage,
+  type Reservation,
+  type ReservationPayload,
 } from "@/lib/api";
 
-const initialFormData = {
+const initialFormData: ReservationPayload = {
   date: "",
   time: "",
   guests: "",
@@ -15,21 +18,25 @@ const initialFormData = {
   contact: "",
 };
 
+type StatusKind = "success" | "warning" | null;
+
 export default function BookingForm() {
-  const [formData, setFormData] = useState(initialFormData);
-  const [availableSlots, setAvailableSlots] = useState([]);
-  const [bookingSummary, setBookingSummary] = useState(null);
+  const [formData, setFormData] = useState<ReservationPayload>(initialFormData);
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [bookingSummary, setBookingSummary] = useState<Reservation | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
+  const [statusKind, setStatusKind] = useState<StatusKind>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
 
-  const handleChange = (event) => {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [event.target.name]: event.target.value });
   };
 
   const handleCheckAvailability = async () => {
     if (!formData.date || !formData.time) {
       setStatusMessage("Choose a date and time before checking availability.");
+      setStatusKind("warning");
       setAvailableSlots([]);
       return;
     }
@@ -43,9 +50,11 @@ export default function BookingForm() {
 
       if (availability.available) {
         setStatusMessage("Slot is available!");
+        setStatusKind("success");
         setAvailableSlots(availability.slots);
       } else {
         setStatusMessage("Slot is already booked or not available.");
+        setStatusKind("warning");
         setAvailableSlots([]);
       }
     } catch (error) {
@@ -55,12 +64,13 @@ export default function BookingForm() {
           "Error checking availability. Please try again."
         )
       );
+      setStatusKind("warning");
     } finally {
       setIsChecking(false);
     }
   };
 
-  const handleBooking = async (event) => {
+  const handleBooking = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsBooking(true);
 
@@ -68,18 +78,18 @@ export default function BookingForm() {
       const reservation = await bookTable(formData);
       setBookingSummary(reservation);
       setStatusMessage("");
+      setStatusKind(null);
       setAvailableSlots([]);
       setFormData(initialFormData);
     } catch (error) {
       setStatusMessage(
         getApiErrorMessage(error, "Error booking table. Please try again.")
       );
+      setStatusKind("warning");
     } finally {
       setIsBooking(false);
     }
   };
-
-  const isSuccessMessage = statusMessage.includes("available");
 
   return (
     <div className="w-full rounded-lg border border-[#ded3c1] bg-[#fffaf2] p-5 shadow-xl shadow-[#6d4d2d]/10 sm:p-7">
@@ -184,7 +194,7 @@ export default function BookingForm() {
       {statusMessage && (
         <div
           className={`mt-5 rounded-lg border px-4 py-3 text-sm font-medium ${
-            isSuccessMessage
+            statusKind === "success"
               ? "border-[#b7d7c2] bg-[#edf8f0] text-[#255647]"
               : "border-[#edd1aa] bg-[#fff5e5] text-[#81521f]"
           }`}
@@ -229,7 +239,13 @@ export default function BookingForm() {
   );
 }
 
-function Field({ label, htmlFor, children }) {
+type FieldProps = {
+  label: string;
+  htmlFor: string;
+  children: ReactNode;
+};
+
+function Field({ label, htmlFor, children }: FieldProps) {
   return (
     <div>
       <label

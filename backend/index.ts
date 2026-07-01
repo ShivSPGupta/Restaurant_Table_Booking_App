@@ -1,5 +1,5 @@
-const app = require("./app");
-const { env } = require("./src/config/env");
+import app from "./app";
+import { env } from "./src/config/env";
 
 if (require.main === module) {
   app.listen(env.port, () => {
@@ -7,4 +7,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = app;
+export default app;

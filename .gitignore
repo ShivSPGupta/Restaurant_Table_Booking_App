@@ -5,9 +5,14 @@ node_modules/
 .next/
 out/
 coverage/
+dist/
 
 # env files
 .env*
+!.env.example
+!.env.local.example
+!**/.env.example
+!**/.env.local.example
 
 # logs
 npm-debug.log*

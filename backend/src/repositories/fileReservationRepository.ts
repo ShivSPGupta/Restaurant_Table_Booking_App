@@ -1,10 +1,11 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
+import type { Reservation, ReservationRepository } from "../types/reservation";
 
-function createFileReservationRepository(dataDir) {
+function createFileReservationRepository(dataDir: string): ReservationRepository {
   const reservationsFile = path.join(dataDir, "reservations.json");
 
-  function ensureStorage() {
+  function ensureStorage(): void {
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
@@ -14,7 +15,7 @@ function createFileReservationRepository(dataDir) {
     }
   }
 
-  function findAll() {
+  function findAll(): Reservation[] {
     ensureStorage();
 
     try {
@@ -26,7 +27,7 @@ function createFileReservationRepository(dataDir) {
     }
   }
 
-  function saveAll(reservations) {
+  function saveAll(reservations: Reservation[]): void {
     ensureStorage();
     fs.writeFileSync(
       reservationsFile,
@@ -35,13 +36,13 @@ function createFileReservationRepository(dataDir) {
     );
   }
 
-  function findByDateTime(date, time) {
+  function findByDateTime(date: string, time: string): Reservation | undefined {
     return findAll().find(
       (reservation) => reservation.date === date && reservation.time === time
     );
   }
 
-  function create(reservation) {
+  function create(reservation: Reservation): Reservation {
     const reservations = findAll();
     reservations.push(reservation);
     saveAll(reservations);
@@ -55,4 +56,4 @@ function createFileReservationRepository(dataDir) {
   };
 }
 
-module.exports = createFileReservationRepository;
+export default createFileReservationRepository;

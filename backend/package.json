@@ -2,16 +2,24 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "node --test",
-    "start": "node index.js"
+    "build": "tsc",
+    "test": "npm run build && node --test dist/app.test.js",
+    "start": "node dist/index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
     "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.1.0",
+    "typescript": "^6.0.3"
   }
 }
