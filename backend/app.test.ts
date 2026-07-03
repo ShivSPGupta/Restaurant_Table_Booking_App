@@ -13,6 +13,7 @@ type TestResponse<TBody = Record<string, unknown>> = {
 };
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "restaurant-booking-"));
+process.env.NODE_ENV = "test";
 process.env.DATA_DIR = tempDir;
 const app = require("./app").default as Express;
 
@@ -104,10 +105,17 @@ test("health endpoint responds successfully", async () => {
 });
 
 test("swagger docs endpoint serves API documentation", async () => {
+  const response = await makeRequest("/api/docs", "GET");
+
+  assert.equal(response.statusCode, 200);
+  assert.match(response.rawBody, /SwaggerUIBundle|Restaurant Booking API Docs/i);
+});
+
+test("swagger docs endpoint works with trailing slash", async () => {
   const response = await makeRequest("/api/docs/", "GET");
 
   assert.equal(response.statusCode, 200);
-  assert.match(response.rawBody, /Swagger UI|Restaurant Booking API Docs/i);
+  assert.match(response.rawBody, /SwaggerUIBundle|Restaurant Booking API Docs/i);
 });
 
 test("openapi json endpoint exposes the API specification", async () => {

@@ -85,15 +85,14 @@ export default function RestaurantAuthCard() {
   };
 
   return (
-    <div className="rounded-lg border border-white/15 bg-white/10 p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="rounded-2xl border border-white/15 bg-white/[0.13] p-4 shadow-xl shadow-black/10 backdrop-blur">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-[#f4d7a6]">
             Restaurant access
           </p>
-          <p className="mt-2 text-sm leading-6 text-white/75">
-            Register or login as a restaurant owner for admin-ready booking
-            workflows.
+          <p className="mt-1 text-sm leading-5 text-white/70">
+            Owner login for admin-ready workflows.
           </p>
         </div>
         {authSession && (
@@ -108,17 +107,22 @@ export default function RestaurantAuthCard() {
       </div>
 
       {authSession ? (
-        <div className="mt-4 rounded-lg border border-[#f4b563]/30 bg-[#f4b563]/15 p-4">
-          <p className="text-sm font-bold text-[#f4d7a6]">
-            {authSession.restaurant.name}
-          </p>
-          <p className="mt-1 text-sm text-white/70">
-            {authSession.restaurant.email}
-          </p>
+        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-[#f4b563]/30 bg-[#f4b563]/15 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-bold text-[#f4d7a6]">
+              {authSession.restaurant.name}
+            </p>
+            <p className="mt-1 text-sm text-white/70">
+              {authSession.restaurant.email}
+            </p>
+          </div>
+          <span className="rounded-full bg-[#f4b563] px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#211b18]">
+            Active
+          </span>
         </div>
       ) : (
         <>
-          <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg bg-black/15 p-1">
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-black/15 p-1">
             <button
               type="button"
               onClick={() => handleModeChange("register")}
@@ -155,25 +159,27 @@ export default function RestaurantAuthCard() {
                 className="auth-input"
               />
             )}
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              placeholder="owner@restaurant.com"
-              className="auth-input"
-            />
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              minLength={8}
-              placeholder="Password"
-              className="auth-input"
-            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                placeholder="owner@restaurant.com"
+                className="auth-input"
+              />
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                minLength={8}
+                placeholder="Password"
+                className="auth-input"
+              />
+            </div>
             {mode === "register" && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <input

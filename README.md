@@ -51,8 +51,8 @@ PORT=3001
 CORS_ORIGIN=http://localhost:3000
 DATA_DIR=./data
 JWT_SECRET=change-this-to-a-long-random-secret
-DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-region.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1
-DIRECT_URL=postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres
+POSTGRES_PRISMA_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-region.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1
+POSTGRES_URL_NON_POOLING=postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres
 ```
 
 Frontend defaults:
@@ -93,9 +93,23 @@ Create one Supabase project and use its PostgreSQL database for this app:
 Supabase Dashboard -> Project Settings -> Database -> Connection string
 ```
 
-Use the transaction pooler connection as `DATABASE_URL`. This is best for Vercel/serverless runtime.
+Use the transaction pooler connection as `POSTGRES_PRISMA_URL`. This is best for Vercel/serverless runtime.
 
-Keep the direct connection as `DIRECT_URL` for reference. If Prisma schema sync fails with the pooler URL, temporarily copy the `DIRECT_URL` value into `DATABASE_URL` locally, run the schema command, then switch `DATABASE_URL` back to the pooler URL for runtime/deployment.
+Use the direct connection as `POSTGRES_URL_NON_POOLING`. Prisma automatically uses this URL for schema commands such as `db:push`, `db:migrate`, `db:deploy`, and `db:studio`.
+
+This gives you two clean connection modes:
+
+```text
+POSTGRES_PRISMA_URL      -> Supabase transaction pooler for app runtime/Vercel
+POSTGRES_URL_NON_POOLING -> Supabase direct connection for Prisma schema changes
+```
+
+This project uses its own Supabase/PostgreSQL schema plus project-prefixed table names, so it can share one Supabase project with other apps safely:
+
+```text
+restaurant_booking.restaurant_booking_reservations
+restaurant_booking.restaurant_booking_restaurants
+```
 
 After updating `backend/.env`, sync the Prisma schema to Supabase:
 
@@ -111,8 +125,8 @@ For Vercel backend deployment, add these environment variables:
 NODE_ENV=production
 CORS_ORIGIN=https://restaurant-table-booking-front.vercel.app
 JWT_SECRET=your-secure-production-secret
-DATABASE_URL=your-supabase-transaction-pooler-url
-DIRECT_URL=your-supabase-direct-url
+POSTGRES_PRISMA_URL=your-supabase-transaction-pooler-url
+POSTGRES_URL_NON_POOLING=your-supabase-direct-url
 ```
 
 Start the backend:
@@ -225,6 +239,6 @@ Restaurant login request:
 
 ## Production Notes
 
-The backend uses PostgreSQL through Prisma when `DATABASE_URL` is configured. The Prisma schema enforces unique reservations by `date` and `time`, which helps prevent duplicate bookings at the database level.
+The backend uses PostgreSQL through Prisma when `POSTGRES_PRISMA_URL` or `DATABASE_URL` is configured. The Prisma schema enforces unique reservations by `date` and `time`, which helps prevent duplicate bookings at the database level.
 
 Do not commit real `.env` files. Commit only `.env.example` files.

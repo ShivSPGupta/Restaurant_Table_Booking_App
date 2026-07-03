@@ -31,7 +31,10 @@ export const env: AppEnv = {
   corsOrigin: process.env.CORS_ORIGIN || defaultCorsOrigin,
   dataDir: process.env.DATA_DIR || path.join(__dirname, "..", "..", "data"),
   jwtSecret,
-  databaseUrl: process.env.DATABASE_URL,
+  databaseUrl:
+    nodeEnv === "test"
+      ? undefined
+      : process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL,
 };
 
 export function getAllowedOrigins(): boolean | string[] {

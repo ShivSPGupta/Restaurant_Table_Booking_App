@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  schemas  = ["restaurant_booking"]
 }
 
 model Reservation {
@@ -17,6 +18,8 @@ model Reservation {
 
   @@unique([date, time])
   @@index([date])
+  @@map("restaurant_booking_reservations")
+  @@schema("restaurant_booking")
 }
 
 model Restaurant {
@@ -29,4 +32,6 @@ model Restaurant {
   createdAt    DateTime @default(now())
 
   @@index([email])
+  @@map("restaurant_booking_restaurants")
+  @@schema("restaurant_booking")
 }
