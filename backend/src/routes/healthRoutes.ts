@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { env } from "../config/env";
+import { getPrismaErrorDetails } from "../lib/prismaError";
 
 const router = Router();
 
@@ -27,13 +28,41 @@ router.get("/db", async (_req, res, next) => {
 
     const prisma = require("../lib/prisma").default;
     await prisma.$queryRaw`SELECT 1`;
+    const [restaurants, reservations] = await Promise.all([
+      prisma.restaurant.count(),
+      prisma.reservation.count(),
+    ]);
 
     res.json({
       ok: true,
       storage: "postgresql",
+      checks: {
+        connection: true,
+        restaurantModel: true,
+        reservationModel: true,
+      },
+      counts: {
+        restaurants,
+        reservations,
+      },
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
+    const prismaError = getPrismaErrorDetails(error);
+
+    if (prismaError) {
+      res.status(500).json({
+        ok: false,
+        storage: "postgresql",
+        error: {
+          code: prismaError.code,
+          meta: prismaError.meta,
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
     next(error);
   }
 });

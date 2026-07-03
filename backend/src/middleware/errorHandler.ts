@@ -1,17 +1,5 @@
 import type { ErrorRequestHandler } from "express";
-
-function getPrismaErrorMessage(error: unknown): string | null {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "clientVersion" in error &&
-    "code" in error
-  ) {
-    return "Database request failed. Check Supabase connection variables and run `npm run db:push` after schema changes.";
-  }
-
-  return null;
-}
+import { getPrismaErrorMessage } from "../lib/prismaError";
 
 const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   const statusCode = error.statusCode || 500;

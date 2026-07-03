@@ -132,6 +132,7 @@ test("database health endpoint reflects file storage in test mode", async () => 
   const response = await makeRequest<{
     ok: boolean;
     storage: string;
+    checks?: Record<string, boolean>;
     timestamp: string;
   }>("/api/health/db", "GET");
 
