@@ -74,10 +74,21 @@ test.beforeEach(() => {
 });
 
 test("health endpoint responds successfully", async () => {
-  const response = await makeRequest<{ ok: boolean }>("/api/health", "GET");
+  const response = await makeRequest<{
+    ok: boolean;
+    service: string;
+    environment: string;
+    storage: string;
+    uptime: number;
+    timestamp: string;
+  }>("/api/health", "GET");
 
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(response.body, { ok: true });
+  assert.equal(response.body.ok, true);
+  assert.equal(response.body.service, "restaurant-booking-api");
+  assert.equal(response.body.storage, "file");
+  assert.equal(typeof response.body.uptime, "number");
+  assert.equal(typeof response.body.timestamp, "string");
 });
 
 test("availability is true before a reservation exists", async () => {

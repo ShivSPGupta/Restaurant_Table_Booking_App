@@ -27,7 +27,10 @@ export type AvailabilityResponse = {
 };
 
 export type ReservationRepository = {
-  findAll: () => Reservation[];
-  findByDateTime: (date: string, time: string) => Reservation | undefined;
-  create: (reservation: Reservation) => Reservation;
+  findAll: () => Promise<Reservation[]> | Reservation[];
+  findByDateTime: (
+    date: string,
+    time: string
+  ) => Promise<Reservation | null | undefined> | Reservation | null | undefined;
+  create: (reservation: Reservation) => Promise<Reservation> | Reservation;
 };

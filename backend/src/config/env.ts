@@ -8,6 +8,7 @@ export type AppEnv = {
   port: number;
   corsOrigin: string;
   dataDir: string;
+  databaseUrl?: string;
 };
 
 export const env: AppEnv = {
@@ -17,6 +18,7 @@ export const env: AppEnv = {
     process.env.CORS_ORIGIN ||
     "http://localhost:3000",
   dataDir: process.env.DATA_DIR || path.join(__dirname, "..", "..", "data"),
+  databaseUrl: process.env.DATABASE_URL,
 };
 
 export function getAllowedOrigins(): boolean | string[] {

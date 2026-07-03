@@ -17,15 +17,15 @@ function createReservationService(reservationRepository: ReservationRepository) 
     }
   }
 
-  function checkAvailability({
+  async function checkAvailability({
     date,
     time,
-  }: AvailabilityRequest): AvailabilityResponse {
+  }: AvailabilityRequest): Promise<AvailabilityResponse> {
     if (!date || !time) {
       throw new AppError("Date and time are required.", 400);
     }
 
-    const reservation = reservationRepository.findByDateTime(date, time);
+    const reservation = await reservationRepository.findByDateTime(date, time);
 
     return {
       available: !reservation,
@@ -33,7 +33,9 @@ function createReservationService(reservationRepository: ReservationRepository) 
     };
   }
 
-  function createReservation(payload: ReservationRequest): Reservation {
+  async function createReservation(
+    payload: ReservationRequest
+  ): Promise<Reservation> {
     const { date, time, guests, name, contact } = payload;
     assertRequiredFields({ date, time, guests, name, contact });
 
@@ -42,7 +44,7 @@ function createReservationService(reservationRepository: ReservationRepository) 
       throw new AppError("Guests must be a whole number greater than 0.", 400);
     }
 
-    const existingReservation = reservationRepository.findByDateTime(
+    const existingReservation = await reservationRepository.findByDateTime(
       date as string,
       time as string
     );

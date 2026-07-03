@@ -3,14 +3,14 @@ import express from "express";
 import { env, getAllowedOrigins } from "./config/env";
 import createReservationController from "./controllers/reservationController";
 import errorHandler from "./middleware/errorHandler";
-import createFileReservationRepository from "./repositories/fileReservationRepository";
+import createReservationRepository from "./repositories/reservationRepositoryFactory";
 import healthRoutes from "./routes/healthRoutes";
 import createReservationRoutes from "./routes/reservationRoutes";
 import createReservationService from "./services/reservationService";
 
 function createApp() {
   const app = express();
-  const reservationRepository = createFileReservationRepository(env.dataDir);
+  const reservationRepository = createReservationRepository();
   const reservationService = createReservationService(reservationRepository);
   const reservationController = createReservationController(reservationService);
 
