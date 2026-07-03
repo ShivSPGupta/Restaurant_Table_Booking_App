@@ -1,18 +1,31 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
+import { Pool, type PoolConfig } from "pg";
 
-function withRequiredSsl(connectionString: string): string {
-  const isSupabaseUrl =
+function isSupabaseConnection(connectionString: string): boolean {
+  return (
     connectionString.includes("supabase.co") ||
-    connectionString.includes("pooler.supabase.com");
+    connectionString.includes("pooler.supabase.com")
+  );
+}
 
-  if (!isSupabaseUrl || connectionString.includes("sslmode=")) {
-    return connectionString;
+function withoutSslMode(connectionString: string): string {
+  const parsedUrl = new URL(connectionString);
+  parsedUrl.searchParams.delete("sslmode");
+  return parsedUrl.toString();
+}
+
+function createPoolConfig(connectionString: string): PoolConfig {
+  if (!isSupabaseConnection(connectionString)) {
+    return { connectionString };
   }
 
-  const separator = connectionString.includes("?") ? "&" : "?";
-  return `${connectionString}${separator}sslmode=require`;
+  return {
+    connectionString: withoutSslMode(connectionString),
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  };
 }
 
 const connectionString = process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL;
@@ -23,7 +36,7 @@ if (!connectionString) {
   );
 }
 
-const adapter = new PrismaPg(new Pool({ connectionString: withRequiredSsl(connectionString) }));
+const adapter = new PrismaPg(new Pool(createPoolConfig(connectionString)));
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

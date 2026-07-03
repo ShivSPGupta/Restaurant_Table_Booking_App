@@ -41,5 +41,16 @@ export function getPrismaErrorMessage(error: unknown): string | null {
     return "Cannot reach Supabase database. Check POSTGRES_PRISMA_URL in Vercel.";
   }
 
+  const driverError = details.meta?.driverAdapterError as
+    | { cause?: { kind?: string; reason?: string } }
+    | undefined;
+
+  if (
+    details.code === "P2010" &&
+    driverError?.cause?.kind === "TlsConnectionError"
+  ) {
+    return "Supabase TLS connection failed. Redeploy with the latest Prisma SSL configuration.";
+  }
+
   return `Database request failed with Prisma code ${details.code}. Check Supabase connection variables and schema sync.`;
 }
