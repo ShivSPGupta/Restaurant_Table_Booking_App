@@ -19,9 +19,17 @@ const defaultCorsOrigin = isProduction
   ? "https://restaurant-table-booking-front.vercel.app"
   : "http://localhost:3000";
 const jwtSecret = process.env.JWT_SECRET || "local-development-secret-change-me";
+const databaseUrl =
+  nodeEnv === "test"
+    ? undefined
+    : process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL;
 
 if (isProduction && !process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is required in production.");
+}
+
+if (isProduction && !databaseUrl) {
+  throw new Error("POSTGRES_PRISMA_URL is required in production.");
 }
 
 export const env: AppEnv = {
@@ -31,10 +39,7 @@ export const env: AppEnv = {
   corsOrigin: process.env.CORS_ORIGIN || defaultCorsOrigin,
   dataDir: process.env.DATA_DIR || path.join(__dirname, "..", "..", "data"),
   jwtSecret,
-  databaseUrl:
-    nodeEnv === "test"
-      ? undefined
-      : process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL,
+  databaseUrl,
 };
 
 export function getAllowedOrigins(): boolean | string[] {

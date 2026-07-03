@@ -20,7 +20,8 @@ const app = require("./app").default as Express;
 function makeRequest<TBody = Record<string, unknown>>(
   pathname: string,
   method: string,
-  body?: Record<string, unknown>
+  body?: Record<string, unknown>,
+  headers: Record<string, string> = {}
 ): Promise<TestResponse<TBody>> {
   return new Promise((resolve, reject) => {
     const server = app.listen(0, () => {
@@ -38,8 +39,9 @@ function makeRequest<TBody = Record<string, unknown>>(
             ? {
                 "Content-Type": "application/json",
                 "Content-Length": Buffer.byteLength(payload),
+                ...headers,
               }
-            : {},
+            : headers,
         },
         (response) => {
           let responseBody = "";
@@ -80,6 +82,28 @@ function makeRequest<TBody = Record<string, unknown>>(
   });
 }
 
+async function registerTestRestaurant(email = "owner@greenfork.test") {
+  const response = await makeRequest<{
+    token: string;
+    restaurant: { id: string; email: string };
+  }>("/api/auth/register", "POST", {
+    name: "The Green Fork",
+    email,
+    password: "securepass123",
+  });
+
+  assert.equal(response.statusCode, 201);
+  assert.ok(response.body);
+
+  return response.body;
+}
+
+function authHeaders(token: string) {
+  return {
+    Authorization: `Bearer ${token}`,
+  };
+}
+
 test.beforeEach(() => {
   fs.writeFileSync(path.join(tempDir, "reservations.json"), "[]", "utf8");
   fs.writeFileSync(path.join(tempDir, "restaurants.json"), "[]", "utf8");
@@ -101,6 +125,20 @@ test("health endpoint responds successfully", async () => {
   assert.equal(response.body.service, "restaurant-booking-api");
   assert.equal(response.body.storage, "file");
   assert.equal(typeof response.body.uptime, "number");
+  assert.equal(typeof response.body.timestamp, "string");
+});
+
+test("database health endpoint reflects file storage in test mode", async () => {
+  const response = await makeRequest<{
+    ok: boolean;
+    storage: string;
+    timestamp: string;
+  }>("/api/health/db", "GET");
+
+  assert.equal(response.statusCode, 200);
+  assert.ok(response.body);
+  assert.equal(response.body.ok, true);
+  assert.equal(response.body.storage, "file");
   assert.equal(typeof response.body.timestamp, "string");
 });
 
@@ -194,13 +232,15 @@ test("duplicate restaurant register is rejected", async () => {
 });
 
 test("availability is true before a reservation exists", async () => {
+  const { token } = await registerTestRestaurant();
   const response = await makeRequest<{ available: boolean; slots: string[] }>(
     "/api/check-availability",
     "POST",
     {
       date: "2026-07-15",
       time: "19:00",
-    }
+    },
+    authHeaders(token)
   );
 
   assert.equal(response.statusCode, 200);
@@ -209,7 +249,23 @@ test("availability is true before a reservation exists", async () => {
   assert.deepEqual(response.body.slots, ["19:00"]);
 });
 
+test("reservation endpoints require restaurant login", async () => {
+  const response = await makeRequest<{ error: string }>(
+    "/api/check-availability",
+    "POST",
+    {
+      date: "2026-07-15",
+      time: "19:00",
+    }
+  );
+
+  assert.equal(response.statusCode, 401);
+  assert.ok(response.body);
+  assert.equal(response.body.error, "Restaurant login is required.");
+});
+
 test("booking a table persists the reservation", async () => {
+  const { token, restaurant } = await registerTestRestaurant();
   const booking = {
     date: "2026-07-15",
     time: "19:00",
@@ -218,24 +274,28 @@ test("booking a table persists the reservation", async () => {
     contact: "9999999999",
   };
 
-  const response = await makeRequest<{ guests: number }>(
+  const response = await makeRequest<{ guests: number; restaurantId: string }>(
     "/api/book-table",
     "POST",
-    booking
+    booking,
+    authHeaders(token)
   );
 
   assert.equal(response.statusCode, 201);
   assert.ok(response.body);
   assert.equal(response.body.guests, 4);
+  assert.equal(response.body.restaurantId, restaurant.id);
 
   const storedReservations = JSON.parse(
     fs.readFileSync(path.join(tempDir, "reservations.json"), "utf8")
   );
   assert.equal(storedReservations.length, 1);
   assert.equal(storedReservations[0].name, "Asha");
+  assert.equal(storedReservations[0].restaurantId, restaurant.id);
 });
 
 test("duplicate bookings are rejected", async () => {
+  const { token } = await registerTestRestaurant();
   const booking = {
     date: "2026-07-15",
     time: "19:00",
@@ -244,14 +304,43 @@ test("duplicate bookings are rejected", async () => {
     contact: "9999999999",
   };
 
-  await makeRequest("/api/book-table", "POST", booking);
+  await makeRequest("/api/book-table", "POST", booking, authHeaders(token));
   const response = await makeRequest<{ error: string }>(
     "/api/book-table",
     "POST",
-    booking
+    booking,
+    authHeaders(token)
   );
 
   assert.equal(response.statusCode, 409);
   assert.ok(response.body);
   assert.equal(response.body.error, "This time slot is already booked.");
+});
+
+test("different restaurants can book the same time slot independently", async () => {
+  const firstRestaurant = await registerTestRestaurant("first@greenfork.test");
+  const secondRestaurant = await registerTestRestaurant("second@greenfork.test");
+  const booking = {
+    date: "2026-07-15",
+    time: "19:00",
+    guests: 4,
+    name: "Asha",
+    contact: "9999999999",
+  };
+
+  const firstResponse = await makeRequest(
+    "/api/book-table",
+    "POST",
+    booking,
+    authHeaders(firstRestaurant.token)
+  );
+  const secondResponse = await makeRequest(
+    "/api/book-table",
+    "POST",
+    booking,
+    authHeaders(secondRestaurant.token)
+  );
+
+  assert.equal(firstResponse.statusCode, 201);
+  assert.equal(secondResponse.statusCode, 201);
 });

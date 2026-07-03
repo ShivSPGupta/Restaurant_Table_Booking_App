@@ -51,8 +51,8 @@ PORT=3001
 CORS_ORIGIN=http://localhost:3000
 DATA_DIR=./data
 JWT_SECRET=change-this-to-a-long-random-secret
-POSTGRES_PRISMA_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-region.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1
-POSTGRES_URL_NON_POOLING=postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres
+POSTGRES_PRISMA_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-region.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1&sslmode=require
+POSTGRES_URL_NON_POOLING=postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres?sslmode=require
 ```
 
 Frontend defaults:
@@ -194,6 +194,14 @@ Interactive Swagger API documentation is available at:
 ```text
 http://localhost:3001/api/docs
 ```
+
+Reservation endpoints require restaurant login. Send the token from register/login as a bearer token:
+
+```text
+Authorization: Bearer <restaurant-token>
+```
+
+Reservations are scoped by restaurant, so each restaurant can only check conflicts and create bookings against its own reservation records.
 
 Availability request:
 

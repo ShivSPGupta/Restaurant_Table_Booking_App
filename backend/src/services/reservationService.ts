@@ -18,14 +18,19 @@ function createReservationService(reservationRepository: ReservationRepository) 
   }
 
   async function checkAvailability({
+    restaurantId,
     date,
     time,
-  }: AvailabilityRequest): Promise<AvailabilityResponse> {
+  }: AvailabilityRequest & { restaurantId: string }): Promise<AvailabilityResponse> {
     if (!date || !time) {
       throw new AppError("Date and time are required.", 400);
     }
 
-    const reservation = await reservationRepository.findByDateTime(date, time);
+    const reservation = await reservationRepository.findByDateTime(
+      restaurantId,
+      date,
+      time
+    );
 
     return {
       available: !reservation,
@@ -34,9 +39,9 @@ function createReservationService(reservationRepository: ReservationRepository) 
   }
 
   async function createReservation(
-    payload: ReservationRequest
+    payload: ReservationRequest & { restaurantId: string }
   ): Promise<Reservation> {
-    const { date, time, guests, name, contact } = payload;
+    const { restaurantId, date, time, guests, name, contact } = payload;
     assertRequiredFields({ date, time, guests, name, contact });
 
     const parsedGuests = Number(guests);
@@ -45,6 +50,7 @@ function createReservationService(reservationRepository: ReservationRepository) 
     }
 
     const existingReservation = await reservationRepository.findByDateTime(
+      restaurantId,
       date as string,
       time as string
     );
@@ -54,6 +60,7 @@ function createReservationService(reservationRepository: ReservationRepository) 
 
     const reservation: Reservation = {
       id: crypto.randomUUID(),
+      restaurantId,
       date: date as string,
       time: time as string,
       guests: parsedGuests,

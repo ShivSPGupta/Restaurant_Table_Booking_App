@@ -36,9 +36,16 @@ function createFileReservationRepository(dataDir: string): ReservationRepository
     );
   }
 
-  function findByDateTime(date: string, time: string): Reservation | undefined {
+  function findByDateTime(
+    restaurantId: string,
+    date: string,
+    time: string
+  ): Reservation | undefined {
     return findAll().find(
-      (reservation) => reservation.date === date && reservation.time === time
+      (reservation) =>
+        reservation.restaurantId === restaurantId &&
+        reservation.date === date &&
+        reservation.time === time
     );
   }
 

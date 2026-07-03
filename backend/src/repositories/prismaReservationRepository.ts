@@ -3,6 +3,7 @@ import type { Reservation, ReservationRepository } from "../types/reservation";
 
 type PrismaReservation = {
   id: string;
+  restaurantId: string;
   date: string;
   time: string;
   guests: number;
@@ -28,12 +29,14 @@ function createPrismaReservationRepository(): ReservationRepository {
   }
 
   async function findByDateTime(
+    restaurantId: string,
     date: string,
     time: string
   ): Promise<Reservation | null> {
     const reservation = await prisma.reservation.findUnique({
       where: {
-        date_time: {
+        restaurantId_date_time: {
+          restaurantId,
           date,
           time,
         },
@@ -47,6 +50,7 @@ function createPrismaReservationRepository(): ReservationRepository {
     const createdReservation = await prisma.reservation.create({
       data: {
         id: reservation.id,
+        restaurantId: reservation.restaurantId,
         date: reservation.date,
         time: reservation.time,
         guests: reservation.guests,

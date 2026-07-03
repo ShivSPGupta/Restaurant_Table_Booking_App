@@ -149,6 +149,7 @@ const openApiSpec = {
       post: {
         tags: ["Reservations"],
         summary: "Check whether a date and time are available",
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -180,6 +181,16 @@ const openApiSpec = {
               },
             },
           },
+          "401": {
+            description: "Restaurant login is required.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -187,6 +198,7 @@ const openApiSpec = {
       post: {
         tags: ["Reservations"],
         summary: "Create a table reservation",
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -218,6 +230,16 @@ const openApiSpec = {
               },
             },
           },
+          "401": {
+            description: "Restaurant login is required.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
           "409": {
             description: "The requested time slot is already booked.",
             content: {
@@ -233,6 +255,13 @@ const openApiSpec = {
     },
   },
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+      },
+    },
     schemas: {
       HealthResponse: {
         type: "object",
@@ -428,6 +457,10 @@ const openApiSpec = {
               id: {
                 type: "string",
                 example: "clx7bq7cm0000x8q2v9p4z2m1",
+              },
+              restaurantId: {
+                type: "string",
+                example: "clx7bp2dn0000q8q2p5w2x9m7",
               },
               createdAt: {
                 type: "string",

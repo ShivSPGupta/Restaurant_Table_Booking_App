@@ -14,4 +14,28 @@ router.get("/", (_req, res) => {
   });
 });
 
+router.get("/db", async (_req, res, next) => {
+  try {
+    if (!env.databaseUrl) {
+      res.json({
+        ok: true,
+        storage: "file",
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    const prisma = require("../lib/prisma").default;
+    await prisma.$queryRaw`SELECT 1`;
+
+    res.json({
+      ok: true,
+      storage: "postgresql",
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

@@ -59,6 +59,26 @@ const apiClient = axios.create({
   },
 });
 
+apiClient.interceptors.request.use((config) => {
+  if (typeof window === "undefined") {
+    return config;
+  }
+
+  const storedSession = window.localStorage.getItem("restaurant-auth-session");
+
+  if (!storedSession) {
+    return config;
+  }
+
+  const session = JSON.parse(storedSession) as AuthResponse;
+
+  if (session.token) {
+    config.headers.Authorization = `Bearer ${session.token}`;
+  }
+
+  return config;
+});
+
 export async function checkAvailability({
   date,
   time,

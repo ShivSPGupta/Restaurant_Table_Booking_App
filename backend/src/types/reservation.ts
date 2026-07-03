@@ -1,5 +1,6 @@
 export type Reservation = {
   id: string;
+  restaurantId: string;
   date: string;
   time: string;
   guests: number;
@@ -29,6 +30,7 @@ export type AvailabilityResponse = {
 export type ReservationRepository = {
   findAll: () => Promise<Reservation[]> | Reservation[];
   findByDateTime: (
+    restaurantId: string,
     date: string,
     time: string
   ) => Promise<Reservation | null | undefined> | Reservation | null | undefined;
