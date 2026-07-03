@@ -23,6 +23,16 @@ const databaseUrl = isSchemaCommand
   ? schemaDatabaseUrl || runtimeDatabaseUrl
   : runtimeDatabaseUrl;
 
+const isTransactionPoolerUrl =
+  databaseUrl.includes("pgbouncer=true") ||
+  databaseUrl.includes("pooler.supabase.com:6543");
+
+if (isSchemaCommand && isTransactionPoolerUrl) {
+  throw new Error(
+    "Prisma schema commands require POSTGRES_URL_NON_POOLING to use a non-transaction-pooler Supabase URL, such as the direct db.<project-ref>.supabase.co:5432 URL or the session pooler on port 5432. Do not use pgbouncer=true or port 6543 for db:push/migrations."
+  );
+}
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   datasource: {
