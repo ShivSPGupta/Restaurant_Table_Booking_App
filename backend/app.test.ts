@@ -8,7 +8,8 @@ import test from "node:test";
 
 type TestResponse<TBody = Record<string, unknown>> = {
   statusCode: number;
-  body: TBody;
+  body: TBody | null;
+  rawBody: string;
 };
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "restaurant-booking-"));
@@ -47,9 +48,18 @@ function makeRequest<TBody = Record<string, unknown>>(
           });
           response.on("end", () => {
             server.close(() => {
+              let parsedBody: TBody | null = null;
+
+              try {
+                parsedBody = responseBody ? JSON.parse(responseBody) : null;
+              } catch {
+                parsedBody = null;
+              }
+
               resolve({
                 statusCode: response.statusCode || 500,
-                body: responseBody ? JSON.parse(responseBody) : null,
+                body: parsedBody,
+                rawBody: responseBody,
               });
             });
           });
@@ -71,6 +81,7 @@ function makeRequest<TBody = Record<string, unknown>>(
 
 test.beforeEach(() => {
   fs.writeFileSync(path.join(tempDir, "reservations.json"), "[]", "utf8");
+  fs.writeFileSync(path.join(tempDir, "restaurants.json"), "[]", "utf8");
 });
 
 test("health endpoint responds successfully", async () => {
@@ -84,11 +95,94 @@ test("health endpoint responds successfully", async () => {
   }>("/api/health", "GET");
 
   assert.equal(response.statusCode, 200);
+  assert.ok(response.body);
   assert.equal(response.body.ok, true);
   assert.equal(response.body.service, "restaurant-booking-api");
   assert.equal(response.body.storage, "file");
   assert.equal(typeof response.body.uptime, "number");
   assert.equal(typeof response.body.timestamp, "string");
+});
+
+test("swagger docs endpoint serves API documentation", async () => {
+  const response = await makeRequest("/api/docs/", "GET");
+
+  assert.equal(response.statusCode, 200);
+  assert.match(response.rawBody, /Swagger UI|Restaurant Booking API Docs/i);
+});
+
+test("openapi json endpoint exposes the API specification", async () => {
+  const response = await makeRequest<{ openapi: string; info: { title: string } }>(
+    "/api/docs/openapi.json",
+    "GET"
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.ok(response.body);
+  assert.equal(response.body.openapi, "3.0.3");
+  assert.equal(response.body.info.title, "Restaurant Table Booking API");
+});
+
+test("restaurant register creates an account and returns a token", async () => {
+  const response = await makeRequest<{
+    token: string;
+    restaurant: { name: string; email: string; passwordHash?: string };
+  }>("/api/auth/register", "POST", {
+    name: "The Green Fork",
+    email: "owner@greenfork.test",
+    password: "securepass123",
+    phone: "9999999999",
+    address: "12 Market Street",
+  });
+
+  assert.equal(response.statusCode, 201);
+  assert.ok(response.body);
+  assert.equal(typeof response.body.token, "string");
+  assert.equal(response.body.restaurant.name, "The Green Fork");
+  assert.equal(response.body.restaurant.email, "owner@greenfork.test");
+  assert.equal(response.body.restaurant.passwordHash, undefined);
+});
+
+test("restaurant login returns the existing account", async () => {
+  const credentials = {
+    email: "owner@greenfork.test",
+    password: "securepass123",
+  };
+
+  await makeRequest("/api/auth/register", "POST", {
+    name: "The Green Fork",
+    ...credentials,
+  });
+  const response = await makeRequest<{
+    token: string;
+    restaurant: { email: string };
+  }>("/api/auth/login", "POST", credentials);
+
+  assert.equal(response.statusCode, 200);
+  assert.ok(response.body);
+  assert.equal(typeof response.body.token, "string");
+  assert.equal(response.body.restaurant.email, "owner@greenfork.test");
+});
+
+test("duplicate restaurant register is rejected", async () => {
+  const restaurant = {
+    name: "The Green Fork",
+    email: "owner@greenfork.test",
+    password: "securepass123",
+  };
+
+  await makeRequest("/api/auth/register", "POST", restaurant);
+  const response = await makeRequest<{ error: string }>(
+    "/api/auth/register",
+    "POST",
+    restaurant
+  );
+
+  assert.equal(response.statusCode, 409);
+  assert.ok(response.body);
+  assert.equal(
+    response.body.error,
+    "A restaurant account already exists for this email."
+  );
 });
 
 test("availability is true before a reservation exists", async () => {
@@ -102,6 +196,7 @@ test("availability is true before a reservation exists", async () => {
   );
 
   assert.equal(response.statusCode, 200);
+  assert.ok(response.body);
   assert.equal(response.body.available, true);
   assert.deepEqual(response.body.slots, ["19:00"]);
 });
@@ -122,6 +217,7 @@ test("booking a table persists the reservation", async () => {
   );
 
   assert.equal(response.statusCode, 201);
+  assert.ok(response.body);
   assert.equal(response.body.guests, 4);
 
   const storedReservations = JSON.parse(
@@ -148,5 +244,6 @@ test("duplicate bookings are rejected", async () => {
   );
 
   assert.equal(response.statusCode, 409);
+  assert.ok(response.body);
   assert.equal(response.body.error, "This time slot is already booked.");
 });

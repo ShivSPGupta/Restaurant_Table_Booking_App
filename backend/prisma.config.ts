@@ -2,7 +2,7 @@ import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
 const databaseUrl =
-  process.env.DATABASE_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
   "postgresql://postgres:postgres@localhost:5432/restaurant_table_booking";
 
 export default defineConfig({

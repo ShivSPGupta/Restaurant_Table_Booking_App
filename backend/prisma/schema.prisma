@@ -18,3 +18,15 @@ model Reservation {
   @@unique([date, time])
   @@index([date])
 }
+
+model Restaurant {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  address      String?
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  @@index([email])
+}

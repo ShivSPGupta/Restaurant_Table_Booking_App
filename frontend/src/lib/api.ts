@@ -23,6 +23,28 @@ export type AvailabilityResponse = {
   slots: string[];
 };
 
+export type RestaurantAuthPayload = {
+  name?: string;
+  email: string;
+  password: string;
+  phone?: string;
+  address?: string;
+};
+
+export type Restaurant = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  address?: string | null;
+  createdAt: string;
+};
+
+export type AuthResponse = {
+  token: string;
+  restaurant: Restaurant;
+};
+
 type ApiErrorResponse = {
   error?: string;
 };
@@ -59,6 +81,27 @@ export async function bookTable(
     "/api/book-table",
     reservation
   );
+  return response.data;
+}
+
+export async function registerRestaurant(
+  restaurant: RestaurantAuthPayload
+): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>(
+    "/api/auth/register",
+    restaurant
+  );
+  return response.data;
+}
+
+export async function loginRestaurant({
+  email,
+  password,
+}: RestaurantAuthPayload): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>("/api/auth/login", {
+    email,
+    password,
+  });
   return response.data;
 }
 

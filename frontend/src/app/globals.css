@@ -12,4 +12,8 @@
   .booking-input {
     @apply block w-full rounded-lg border border-[#d7c7b2] bg-white px-3 py-3 text-sm text-[#211b18] shadow-sm outline-none transition placeholder:text-[#a38f78] focus:border-[#255647] focus:ring-4 focus:ring-[#255647]/10;
   }
+
+  .auth-input {
+    @apply block w-full rounded-lg border border-white/15 bg-white/95 px-3 py-3 text-sm text-[#211b18] shadow-sm outline-none transition placeholder:text-[#7d6b5b] focus:border-[#f4b563] focus:ring-4 focus:ring-[#f4b563]/20;
+  }
 }

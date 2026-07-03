@@ -9,6 +9,7 @@ export type AppEnv = {
   port: number;
   corsOrigin: string;
   dataDir: string;
+  jwtSecret: string;
   databaseUrl?: string;
 };
 
@@ -17,6 +18,11 @@ const isProduction = nodeEnv === "production";
 const defaultCorsOrigin = isProduction
   ? "https://restaurant-table-booking-front.vercel.app"
   : "http://localhost:3000";
+const jwtSecret = process.env.JWT_SECRET || "local-development-secret-change-me";
+
+if (isProduction && !process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET is required in production.");
+}
 
 export const env: AppEnv = {
   nodeEnv,
@@ -24,6 +30,7 @@ export const env: AppEnv = {
   port: Number(process.env.PORT) || 3001,
   corsOrigin: process.env.CORS_ORIGIN || defaultCorsOrigin,
   dataDir: process.env.DATA_DIR || path.join(__dirname, "..", "..", "data"),
+  jwtSecret,
   databaseUrl: process.env.DATABASE_URL,
 };
 

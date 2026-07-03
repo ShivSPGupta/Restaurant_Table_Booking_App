@@ -1,4 +1,5 @@
 import BookingForm from "@/components/BookingForm";
+import RestaurantAuthCard from "@/components/RestaurantAuthCard";
 
 export default function Home() {
   return (
@@ -47,6 +48,10 @@ export default function Home() {
                 Peak seating starts around 7:30 PM. Check availability first
                 for faster confirmation.
               </p>
+            </div>
+
+            <div className="mt-5">
+              <RestaurantAuthCard />
             </div>
           </div>
         </div>

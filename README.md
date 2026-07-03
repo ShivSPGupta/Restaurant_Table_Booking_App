@@ -48,9 +48,11 @@ Backend defaults:
 ```env
 NODE_ENV=development
 PORT=3001
-CORS_ORIGIN=http://localhost:3000,http://localhost:3002,http://localhost:3010
+CORS_ORIGIN=http://localhost:3000
 DATA_DIR=./data
-DATABASE_URL=postgresql://username:password@host:5432/database?sslmode=require
+JWT_SECRET=change-this-to-a-long-random-secret
+DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-region.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1
+DIRECT_URL=postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres
 ```
 
 Frontend defaults:
@@ -82,6 +84,36 @@ npm run db:migrate
 ```
 
 If `DATABASE_URL` is not set, the backend falls back to local JSON file storage.
+
+## Supabase Setup
+
+Create one Supabase project and use its PostgreSQL database for this app:
+
+```text
+Supabase Dashboard -> Project Settings -> Database -> Connection string
+```
+
+Use the transaction pooler connection as `DATABASE_URL`. This is best for Vercel/serverless runtime.
+
+Keep the direct connection as `DIRECT_URL` for reference. If Prisma schema sync fails with the pooler URL, temporarily copy the `DIRECT_URL` value into `DATABASE_URL` locally, run the schema command, then switch `DATABASE_URL` back to the pooler URL for runtime/deployment.
+
+After updating `backend/.env`, sync the Prisma schema to Supabase:
+
+```bash
+cd backend
+npm run db:generate
+npm run db:push
+```
+
+For Vercel backend deployment, add these environment variables:
+
+```text
+NODE_ENV=production
+CORS_ORIGIN=https://restaurant-table-booking-front.vercel.app
+JWT_SECRET=your-secure-production-secret
+DATABASE_URL=your-supabase-transaction-pooler-url
+DIRECT_URL=your-supabase-direct-url
+```
 
 Start the backend:
 
@@ -115,6 +147,8 @@ npm run build   # Compile TypeScript to dist/
 npm run dev     # Start TypeScript backend with auto-restart
 npm run db:generate # Generate Prisma client
 npm run db:migrate  # Run Prisma migrations against PostgreSQL
+npm run db:push     # Push Prisma schema to Supabase/PostgreSQL
+npm run db:deploy   # Apply committed Prisma migrations in production
 npm run db:studio   # Open Prisma Studio
 npm test        # Build and run API tests
 npm start       # Start compiled backend
@@ -133,8 +167,18 @@ npm run lint    # Run ESLint
 
 ```text
 GET  /api/health
+GET  /api/docs
+GET  /api/docs/openapi.json
+POST /api/auth/register
+POST /api/auth/login
 POST /api/check-availability
 POST /api/book-table
+```
+
+Interactive Swagger API documentation is available at:
+
+```text
+http://localhost:3001/api/docs
 ```
 
 Availability request:
@@ -155,6 +199,27 @@ Booking request:
   "guests": 4,
   "name": "Asha",
   "contact": "9999999999"
+}
+```
+
+Restaurant register request:
+
+```json
+{
+  "name": "The Green Fork",
+  "email": "owner@greenfork.com",
+  "password": "securepass123",
+  "phone": "+91 98765 43210",
+  "address": "12 Market Street"
+}
+```
+
+Restaurant login request:
+
+```json
+{
+  "email": "owner@greenfork.com",
+  "password": "securepass123"
 }
 ```
 
