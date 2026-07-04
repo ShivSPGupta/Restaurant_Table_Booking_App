@@ -1,13 +1,14 @@
 import { Router } from "express";
 import type createReservationController from "../controllers/reservationController";
-import requireRestaurantAuth from "../middleware/requireRestaurantAuth";
+import { requireAuth } from "../middleware/requireRestaurantAuth";
 
 type ReservationController = ReturnType<typeof createReservationController>;
 
 function createReservationRoutes(reservationController: ReservationController) {
   const router = Router();
 
-  router.use(requireRestaurantAuth);
+  router.use(requireAuth);
+  router.get("/reservations", reservationController.listMyReservations);
   router.post("/check-availability", reservationController.checkAvailability);
   router.post("/book-table", reservationController.createReservation);
 

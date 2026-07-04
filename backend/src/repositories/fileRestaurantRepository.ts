@@ -50,9 +50,31 @@ function createFileRestaurantRepository(dataDir: string): RestaurantRepository {
     return restaurant;
   }
 
+  function updateAvailability(
+    restaurantId: string,
+    updates: Pick<RestaurantRecord, "openingTime" | "closingTime">
+  ): RestaurantRecord | null {
+    const restaurants = findAll();
+    const restaurantIndex = restaurants.findIndex(
+      (restaurant) => restaurant.id === restaurantId
+    );
+
+    if (restaurantIndex === -1) {
+      return null;
+    }
+
+    restaurants[restaurantIndex] = {
+      ...restaurants[restaurantIndex],
+      ...updates,
+    };
+    saveAll(restaurants);
+    return restaurants[restaurantIndex];
+  }
+
   return {
     findByEmail,
     create,
+    updateAvailability,
   };
 }
 

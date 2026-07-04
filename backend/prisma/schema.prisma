@@ -10,6 +10,8 @@ datasource db {
 model Reservation {
   id           String     @id @default(uuid())
   restaurantId String
+  userId       String?
+  tableId      String?
   date         String
   time         String
   guests       Int
@@ -17,25 +19,61 @@ model Reservation {
   contact      String
   createdAt    DateTime   @default(now())
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  table        Table?      @relation(fields: [tableId], references: [id], onDelete: SetNull)
 
   @@unique([restaurantId, date, time])
   @@index([restaurantId])
+  @@index([userId])
+  @@index([tableId])
   @@index([date])
   @@map("restaurant_booking_reservations")
   @@schema("restaurant_booking")
 }
 
 model Restaurant {
-  id           String   @id @default(uuid())
+  id           String        @id @default(uuid())
   name         String
-  email        String   @unique
+  email        String        @unique
   phone        String?
   address      String?
+  openingTime  String        @default("10:00")
+  closingTime  String        @default("22:00")
   passwordHash String
-  createdAt    DateTime @default(now())
+  createdAt    DateTime      @default(now())
   reservations  Reservation[]
+  tables       Table[]
 
   @@index([email])
   @@map("restaurant_booking_restaurants")
+  @@schema("restaurant_booking")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  phone        String?
+  passwordHash String
+  createdAt    DateTime      @default(now())
+  reservations Reservation[]
+
+  @@index([email])
+  @@map("restaurant_booking_users")
+  @@schema("restaurant_booking")
+}
+
+model Table {
+  id           String        @id @default(uuid())
+  restaurantId String
+  name         String
+  capacity     Int
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
+
+  @@index([restaurantId])
+  @@map("restaurant_booking_tables")
   @@schema("restaurant_booking")
 }

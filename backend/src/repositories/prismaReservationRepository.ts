@@ -4,6 +4,8 @@ import type { Reservation, ReservationRepository } from "../types/reservation";
 type PrismaReservation = {
   id: string;
   restaurantId: string;
+  userId: string | null;
+  tableId: string | null;
   date: string;
   time: string;
   guests: number;
@@ -22,6 +24,24 @@ function mapReservation(reservation: PrismaReservation): Reservation {
 function createPrismaReservationRepository(): ReservationRepository {
   async function findAll(): Promise<Reservation[]> {
     const reservations = await prisma.reservation.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+
+    return reservations.map(mapReservation);
+  }
+
+  async function findByRestaurantId(restaurantId: string): Promise<Reservation[]> {
+    const reservations = await prisma.reservation.findMany({
+      where: { restaurantId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return reservations.map(mapReservation);
+  }
+
+  async function findByUserId(userId: string): Promise<Reservation[]> {
+    const reservations = await prisma.reservation.findMany({
+      where: { userId },
       orderBy: { createdAt: "desc" },
     });
 
@@ -51,6 +71,8 @@ function createPrismaReservationRepository(): ReservationRepository {
       data: {
         id: reservation.id,
         restaurantId: reservation.restaurantId,
+        userId: reservation.userId,
+        tableId: reservation.tableId,
         date: reservation.date,
         time: reservation.time,
         guests: reservation.guests,
@@ -65,6 +87,8 @@ function createPrismaReservationRepository(): ReservationRepository {
 
   return {
     findAll,
+    findByRestaurantId,
+    findByUserId,
     findByDateTime,
     create,
   };

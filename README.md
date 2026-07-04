@@ -53,6 +53,7 @@ DATA_DIR=./data
 JWT_SECRET=change-this-to-a-long-random-secret
 POSTGRES_PRISMA_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-region.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1&sslmode=require
 POSTGRES_URL_NON_POOLING=postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres?sslmode=require
+SUPABASE_CA_CERT=
 ```
 
 Frontend defaults:
@@ -104,6 +105,8 @@ POSTGRES_PRISMA_URL      -> Supabase transaction pooler for app runtime/Vercel
 POSTGRES_URL_NON_POOLING -> Supabase direct connection for Prisma schema changes
 ```
 
+For stricter production SSL verification, add the Supabase CA certificate as `SUPABASE_CA_CERT`. If this value is present, the backend verifies the database certificate chain. If it is not present, the backend still uses encrypted SSL but skips certificate-chain verification for compatibility with serverless deployments.
+
 This project uses its own Supabase/PostgreSQL schema plus project-prefixed table names, so it can share one Supabase project with other apps safely:
 
 ```text
@@ -127,6 +130,7 @@ CORS_ORIGIN=https://restaurant-table-booking-front.vercel.app
 JWT_SECRET=your-secure-production-secret
 POSTGRES_PRISMA_URL=your-supabase-transaction-pooler-url
 POSTGRES_URL_NON_POOLING=your-supabase-direct-url
+SUPABASE_CA_CERT=your-supabase-ca-certificate
 ```
 
 Start the backend:

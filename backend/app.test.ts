@@ -107,6 +107,8 @@ function authHeaders(token: string) {
 test.beforeEach(() => {
   fs.writeFileSync(path.join(tempDir, "reservations.json"), "[]", "utf8");
   fs.writeFileSync(path.join(tempDir, "restaurants.json"), "[]", "utf8");
+  fs.writeFileSync(path.join(tempDir, "users.json"), "[]", "utf8");
+  fs.writeFileSync(path.join(tempDir, "tables.json"), "[]", "utf8");
 });
 
 test("health endpoint responds successfully", async () => {

@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 
 const initialFormData: ReservationPayload = {
+  restaurantId: "",
   date: "",
   time: "",
   guests: "",
@@ -108,6 +109,18 @@ export default function BookingForm() {
       </div>
 
       <form onSubmit={handleBooking} className="mt-6 space-y-5">
+        <Field label="Restaurant ID (for user bookings)" htmlFor="restaurantId">
+          <input
+            id="restaurantId"
+            type="text"
+            name="restaurantId"
+            value={formData.restaurantId}
+            onChange={handleChange}
+            placeholder="Required when logged in as a user"
+            className="booking-input"
+          />
+        </Field>
+
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Date" htmlFor="date">
             <input

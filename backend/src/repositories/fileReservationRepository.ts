@@ -49,6 +49,16 @@ function createFileReservationRepository(dataDir: string): ReservationRepository
     );
   }
 
+  function findByRestaurantId(restaurantId: string): Reservation[] {
+    return findAll().filter(
+      (reservation) => reservation.restaurantId === restaurantId
+    );
+  }
+
+  function findByUserId(userId: string): Reservation[] {
+    return findAll().filter((reservation) => reservation.userId === userId);
+  }
+
   function create(reservation: Reservation): Reservation {
     const reservations = findAll();
     reservations.push(reservation);
@@ -58,6 +68,8 @@ function createFileReservationRepository(dataDir: string): ReservationRepository
 
   return {
     findAll,
+    findByRestaurantId,
+    findByUserId,
     findByDateTime,
     create,
   };

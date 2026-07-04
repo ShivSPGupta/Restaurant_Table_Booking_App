@@ -10,6 +10,8 @@ type PrismaRestaurant = {
   email: string;
   phone: string | null;
   address: string | null;
+  openingTime: string;
+  closingTime: string;
   passwordHash: string;
   createdAt: Date;
 };
@@ -42,6 +44,8 @@ function createPrismaRestaurantRepository(): RestaurantRepository {
         email: restaurant.email,
         phone: restaurant.phone,
         address: restaurant.address,
+        openingTime: restaurant.openingTime,
+        closingTime: restaurant.closingTime,
         passwordHash: restaurant.passwordHash,
         createdAt: new Date(restaurant.createdAt),
       },
@@ -50,9 +54,22 @@ function createPrismaRestaurantRepository(): RestaurantRepository {
     return mapRestaurant(createdRestaurant);
   }
 
+  async function updateAvailability(
+    restaurantId: string,
+    updates: Pick<RestaurantRecord, "openingTime" | "closingTime">
+  ): Promise<RestaurantRecord | null> {
+    const restaurant = await prisma.restaurant.update({
+      where: { id: restaurantId },
+      data: updates,
+    });
+
+    return restaurant ? mapRestaurant(restaurant) : null;
+  }
+
   return {
     findByEmail,
     create,
+    updateAvailability,
   };
 }
 

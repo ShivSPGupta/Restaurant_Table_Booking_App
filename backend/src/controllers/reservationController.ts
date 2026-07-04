@@ -7,10 +7,13 @@ type ReservationService = ReturnType<typeof createReservationService>;
 function createReservationController(reservationService: ReservationService) {
   const checkAvailability: RequestHandler = async (req, res, next) => {
     try {
-      const { restaurantId } = req as AuthenticatedRequest;
+      const { authRole, restaurantId } = req as AuthenticatedRequest;
       const availability = await reservationService.checkAvailability({
         ...req.body,
-        restaurantId: restaurantId as string,
+        restaurantId:
+          authRole === "restaurant"
+            ? (restaurantId as string)
+            : (req.body.restaurantId as string),
       });
       res.json(availability);
     } catch (error) {
@@ -20,12 +23,32 @@ function createReservationController(reservationService: ReservationService) {
 
   const createReservation: RequestHandler = async (req, res, next) => {
     try {
-      const { restaurantId } = req as AuthenticatedRequest;
+      const { authRole, restaurantId, userId } = req as AuthenticatedRequest;
       const reservation = await reservationService.createReservation({
         ...req.body,
-        restaurantId: restaurantId as string,
+        restaurantId:
+          authRole === "restaurant"
+            ? (restaurantId as string)
+            : (req.body.restaurantId as string),
+        userId: authRole === "user" ? userId : null,
       });
       res.status(201).json(reservation);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  const listMyReservations: RequestHandler = async (req, res, next) => {
+    try {
+      const { authRole, restaurantId, userId } = req as AuthenticatedRequest;
+      const reservations =
+        authRole === "restaurant"
+          ? await reservationService.listRestaurantReservations(
+              restaurantId as string
+            )
+          : await reservationService.listUserReservations(userId as string);
+
+      res.json(reservations);
     } catch (error) {
       next(error);
     }
@@ -34,6 +57,7 @@ function createReservationController(reservationService: ReservationService) {
   return {
     checkAvailability,
     createReservation,
+    listMyReservations,
   };
 }
 

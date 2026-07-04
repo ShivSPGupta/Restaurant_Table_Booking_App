@@ -22,9 +22,29 @@ function createAuthController(authService: AuthService) {
     }
   };
 
+  const registerUser: RequestHandler = async (req, res, next) => {
+    try {
+      const authResponse = await authService.registerUser(req.body);
+      res.status(201).json(authResponse);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  const loginUser: RequestHandler = async (req, res, next) => {
+    try {
+      const authResponse = await authService.loginUser(req.body);
+      res.json(authResponse);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   return {
     registerRestaurant,
     loginRestaurant,
+    registerUser,
+    loginUser,
   };
 }
 

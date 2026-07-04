@@ -22,8 +22,8 @@ function createReservationService(reservationRepository: ReservationRepository) 
     date,
     time,
   }: AvailabilityRequest & { restaurantId: string }): Promise<AvailabilityResponse> {
-    if (!date || !time) {
-      throw new AppError("Date and time are required.", 400);
+    if (!restaurantId || !date || !time) {
+      throw new AppError("Restaurant, date, and time are required.", 400);
     }
 
     const reservation = await reservationRepository.findByDateTime(
@@ -39,10 +39,14 @@ function createReservationService(reservationRepository: ReservationRepository) 
   }
 
   async function createReservation(
-    payload: ReservationRequest & { restaurantId: string }
+    payload: ReservationRequest & { restaurantId: string; userId?: string | null }
   ): Promise<Reservation> {
-    const { restaurantId, date, time, guests, name, contact } = payload;
+    const { restaurantId, userId, tableId, date, time, guests, name, contact } = payload;
     assertRequiredFields({ date, time, guests, name, contact });
+
+    if (!restaurantId) {
+      throw new AppError("Restaurant is required for booking.", 400);
+    }
 
     const parsedGuests = Number(guests);
     if (!Number.isInteger(parsedGuests) || parsedGuests < 1) {
@@ -61,6 +65,8 @@ function createReservationService(reservationRepository: ReservationRepository) 
     const reservation: Reservation = {
       id: crypto.randomUUID(),
       restaurantId,
+      userId: userId || null,
+      tableId: tableId || null,
       date: date as string,
       time: time as string,
       guests: parsedGuests,
@@ -75,6 +81,8 @@ function createReservationService(reservationRepository: ReservationRepository) 
   return {
     checkAvailability,
     createReservation,
+    listRestaurantReservations: reservationRepository.findByRestaurantId,
+    listUserReservations: reservationRepository.findByUserId,
   };
 }
 

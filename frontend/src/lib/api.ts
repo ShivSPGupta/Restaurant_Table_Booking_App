@@ -1,6 +1,7 @@
 import axios, { AxiosError } from "axios";
 
 export type ReservationPayload = {
+  restaurantId?: string;
   date: string;
   time: string;
   guests: string;
@@ -29,6 +30,8 @@ export type RestaurantAuthPayload = {
   password: string;
   phone?: string;
   address?: string;
+  openingTime?: string;
+  closingTime?: string;
 };
 
 export type Restaurant = {
@@ -42,7 +45,15 @@ export type Restaurant = {
 
 export type AuthResponse = {
   token: string;
-  restaurant: Restaurant;
+  role: "restaurant" | "user";
+  restaurant?: Restaurant;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string | null;
+    createdAt: string;
+  };
 };
 
 type ApiErrorResponse = {
@@ -114,11 +125,29 @@ export async function registerRestaurant(
   return response.data;
 }
 
+export async function registerUser(
+  user: RestaurantAuthPayload
+): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>("/api/auth/user/register", user);
+  return response.data;
+}
+
 export async function loginRestaurant({
   email,
   password,
 }: RestaurantAuthPayload): Promise<AuthResponse> {
   const response = await apiClient.post<AuthResponse>("/api/auth/login", {
+    email,
+    password,
+  });
+  return response.data;
+}
+
+export async function loginUser({
+  email,
+  password,
+}: RestaurantAuthPayload): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>("/api/auth/user/login", {
     email,
     password,
   });

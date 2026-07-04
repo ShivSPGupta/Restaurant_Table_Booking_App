@@ -20,11 +20,18 @@ function createPoolConfig(connectionString: string): PoolConfig {
     return { connectionString };
   }
 
+  const supabaseCaCert = process.env.SUPABASE_CA_CERT?.replace(/\\n/g, "\n");
+
   return {
     connectionString: withoutSslMode(connectionString),
-    ssl: {
-      rejectUnauthorized: false,
-    },
+    ssl: supabaseCaCert
+      ? {
+          ca: supabaseCaCert,
+          rejectUnauthorized: true,
+        }
+      : {
+          rejectUnauthorized: false,
+        },
   };
 }
 

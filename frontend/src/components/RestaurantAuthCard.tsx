@@ -5,7 +5,9 @@ import { useState } from "react";
 import {
   getApiErrorMessage,
   loginRestaurant,
+  loginUser,
   registerRestaurant,
+  registerUser,
   type AuthResponse,
   type RestaurantAuthPayload,
 } from "@/lib/api";
@@ -16,12 +18,16 @@ const initialFormData: RestaurantAuthPayload = {
   password: "",
   phone: "",
   address: "",
+  openingTime: "10:00",
+  closingTime: "22:00",
 };
 
 type AuthMode = "register" | "login";
+type AccountType = "restaurant" | "user";
 
 export default function RestaurantAuthCard() {
   const [mode, setMode] = useState<AuthMode>("register");
+  const [accountType, setAccountType] = useState<AccountType>("restaurant");
   const [formData, setFormData] =
     useState<RestaurantAuthPayload>(initialFormData);
   const [authSession, setAuthSession] = useState<AuthResponse | null>(() => {
@@ -47,6 +53,11 @@ export default function RestaurantAuthCard() {
     setStatusMessage("");
   };
 
+  const handleAccountTypeChange = (nextAccountType: AccountType) => {
+    setAccountType(nextAccountType);
+    setStatusMessage("");
+  };
+
   const handleLogout = () => {
     window.localStorage.removeItem("restaurant-auth-session");
     setAuthSession(null);
@@ -61,8 +72,12 @@ export default function RestaurantAuthCard() {
     try {
       const response =
         mode === "register"
-          ? await registerRestaurant(formData)
-          : await loginRestaurant(formData);
+          ? accountType === "restaurant"
+            ? await registerRestaurant(formData)
+            : await registerUser(formData)
+          : accountType === "restaurant"
+            ? await loginRestaurant(formData)
+            : await loginUser(formData);
 
       window.localStorage.setItem(
         "restaurant-auth-session",
@@ -92,7 +107,7 @@ export default function RestaurantAuthCard() {
             Restaurant access
           </p>
           <p className="mt-1 text-sm leading-5 text-white/70">
-            Owner login for admin-ready workflows.
+            Login as a guest user or restaurant owner.
           </p>
         </div>
         {authSession && (
@@ -110,10 +125,13 @@ export default function RestaurantAuthCard() {
         <div className="mt-4 flex flex-col gap-3 rounded-xl border border-[#f4b563]/30 bg-[#f4b563]/15 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-bold text-[#f4d7a6]">
-              {authSession.restaurant.name}
-            </p>
+            {authSession.restaurant?.name || authSession.user?.name}
+          </p>
             <p className="mt-1 text-sm text-white/70">
-              {authSession.restaurant.email}
+              {authSession.restaurant?.email || authSession.user?.email}
+            </p>
+            <p className="mt-2 break-all text-xs text-white/55">
+              ID: {authSession.restaurant?.id || authSession.user?.id}
             </p>
           </div>
           <span className="rounded-full bg-[#f4b563] px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#211b18]">
@@ -122,6 +140,31 @@ export default function RestaurantAuthCard() {
         </div>
       ) : (
         <>
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-black/15 p-1">
+            <button
+              type="button"
+              onClick={() => handleAccountTypeChange("restaurant")}
+              className={`rounded-md px-3 py-2 text-sm font-bold transition ${
+                accountType === "restaurant"
+                  ? "bg-white text-[#1f322a]"
+                  : "text-white/70 hover:bg-white/10"
+              }`}
+            >
+              Restaurant
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAccountTypeChange("user")}
+              className={`rounded-md px-3 py-2 text-sm font-bold transition ${
+                accountType === "user"
+                  ? "bg-white text-[#1f322a]"
+                  : "text-white/70 hover:bg-white/10"
+              }`}
+            >
+              User
+            </button>
+          </div>
+
           <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-black/15 p-1">
             <button
               type="button"
@@ -155,7 +198,7 @@ export default function RestaurantAuthCard() {
                 value={formData.name}
                 onChange={handleChange}
                 required
-                placeholder="Restaurant name"
+                placeholder={accountType === "restaurant" ? "Restaurant name" : "Your name"}
                 className="auth-input"
               />
             )}
@@ -180,7 +223,7 @@ export default function RestaurantAuthCard() {
                 className="auth-input"
               />
             </div>
-            {mode === "register" && (
+            {mode === "register" && accountType === "restaurant" && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <input
                   type="tel"
@@ -200,6 +243,24 @@ export default function RestaurantAuthCard() {
                 />
               </div>
             )}
+            {mode === "register" && accountType === "restaurant" && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <input
+                  type="time"
+                  name="openingTime"
+                  value={formData.openingTime}
+                  onChange={handleChange}
+                  className="auth-input"
+                />
+                <input
+                  type="time"
+                  name="closingTime"
+                  value={formData.closingTime}
+                  onChange={handleChange}
+                  className="auth-input"
+                />
+              </div>
+            )}
             <button
               type="submit"
               disabled={isSubmitting}
@@ -208,8 +269,8 @@ export default function RestaurantAuthCard() {
               {isSubmitting
                 ? "Please wait..."
                 : mode === "register"
-                  ? "Create restaurant account"
-                  : "Login to restaurant"}
+                  ? `Create ${accountType} account`
+                  : `Login as ${accountType}`}
             </button>
           </form>
         </>

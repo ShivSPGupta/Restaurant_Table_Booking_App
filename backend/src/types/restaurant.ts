@@ -4,6 +4,8 @@ export type Restaurant = {
   email: string;
   phone?: string | null;
   address?: string | null;
+  openingTime: string;
+  closingTime: string;
   createdAt: string;
 };
 
@@ -17,16 +19,8 @@ export type RegisterRestaurantRequest = {
   password?: string;
   phone?: string;
   address?: string;
-};
-
-export type LoginRestaurantRequest = {
-  email?: string;
-  password?: string;
-};
-
-export type AuthResponse = {
-  token: string;
-  restaurant: Restaurant;
+  openingTime?: string;
+  closingTime?: string;
 };
 
 export type RestaurantRepository = {
@@ -40,4 +34,8 @@ export type RestaurantRepository = {
   create: (
     restaurant: RestaurantRecord
   ) => Promise<RestaurantRecord> | RestaurantRecord;
+  updateAvailability: (
+    restaurantId: string,
+    updates: Pick<Restaurant, "openingTime" | "closingTime">
+  ) => Promise<RestaurantRecord | null | undefined> | RestaurantRecord | null | undefined;
 };
