@@ -66,12 +66,57 @@ function createFileReservationRepository(dataDir: string): ReservationRepository
     return reservation;
   }
 
+  function update(
+    restaurantId: string,
+    reservationId: string,
+    updates: Partial<Pick<Reservation, "tableId" | "date" | "time" | "guests" | "name" | "contact">>
+  ): Reservation | null {
+    const reservations = findAll();
+    const reservationIndex = reservations.findIndex(
+      (reservation) =>
+        reservation.id === reservationId &&
+        reservation.restaurantId === restaurantId
+    );
+
+    if (reservationIndex === -1) {
+      return null;
+    }
+
+    reservations[reservationIndex] = {
+      ...reservations[reservationIndex],
+      ...updates,
+    };
+    saveAll(reservations);
+    return reservations[reservationIndex];
+  }
+
+  function deleteReservation(
+    restaurantId: string,
+    reservationId: string
+  ): boolean {
+    const reservations = findAll();
+    const nextReservations = reservations.filter(
+      (reservation) =>
+        reservation.id !== reservationId ||
+        reservation.restaurantId !== restaurantId
+    );
+
+    if (nextReservations.length === reservations.length) {
+      return false;
+    }
+
+    saveAll(nextReservations);
+    return true;
+  }
+
   return {
     findAll,
     findByRestaurantId,
     findByUserId,
     findByDateTime,
     create,
+    update,
+    delete: deleteReservation,
   };
 }
 

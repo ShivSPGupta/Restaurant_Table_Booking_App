@@ -85,12 +85,54 @@ function createPrismaReservationRepository(): ReservationRepository {
     return mapReservation(createdReservation);
   }
 
+  async function update(
+    restaurantId: string,
+    reservationId: string,
+    updates: Partial<Pick<Reservation, "tableId" | "date" | "time" | "guests" | "name" | "contact">>
+  ): Promise<Reservation | null> {
+    const existingReservation = await prisma.reservation.findFirst({
+      where: { id: reservationId, restaurantId },
+    });
+
+    if (!existingReservation) {
+      return null;
+    }
+
+    const updatedReservation = await prisma.reservation.update({
+      where: { id: reservationId },
+      data: updates,
+    });
+
+    return mapReservation(updatedReservation);
+  }
+
+  async function deleteReservation(
+    restaurantId: string,
+    reservationId: string
+  ): Promise<boolean> {
+    const existingReservation = await prisma.reservation.findFirst({
+      where: { id: reservationId, restaurantId },
+    });
+
+    if (!existingReservation) {
+      return false;
+    }
+
+    await prisma.reservation.delete({
+      where: { id: reservationId },
+    });
+
+    return true;
+  }
+
   return {
     findAll,
     findByRestaurantId,
     findByUserId,
     findByDateTime,
     create,
+    update,
+    delete: deleteReservation,
   };
 }
 

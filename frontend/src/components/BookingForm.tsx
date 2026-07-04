@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEvent, FormEvent, ReactNode } from "react";
+import type { ChangeEvent, ReactNode, SubmitEvent } from "react";
 import { useEffect, useState } from "react";
 import {
   bookTable,
@@ -109,7 +109,7 @@ export default function BookingForm() {
     }
   };
 
-  const handleBooking = async (event: FormEvent<HTMLFormElement>) => {
+  const handleBooking = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsBooking(true);
 
@@ -131,18 +131,22 @@ export default function BookingForm() {
   };
 
   return (
-    <div className="w-full rounded-lg border border-[#ded3c1] bg-[#fffaf2] p-5 shadow-xl shadow-[#6d4d2d]/10 sm:p-7">
+    <div className="w-full rounded-[2rem] border border-white/70 bg-white/70 p-5 shadow-2xl shadow-[#6d4d2d]/12 backdrop-blur-xl sm:p-7">
       <div className="flex flex-col gap-3 border-b border-[#e6dac7] pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#a85d29]">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#a85d29]">
             New reservation
           </p>
-          <h2 className="mt-2 text-3xl font-bold text-[#211b18]">
+          <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-[#211b18]">
             Book a table
           </h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-[#6f5b48]">
+            Login is required to check availability and book. Guest accounts can
+            track booking history from the dashboard.
+          </p>
         </div>
-        <div className="rounded-lg bg-[#efe4d2] px-4 py-3 text-sm text-[#5f493a]">
-          <span className="font-semibold text-[#211b18]">Service:</span> Dinner
+        <div className="rounded-full border border-[#e0c8a8] bg-[#f4b563]/25 px-4 py-2 text-sm font-bold text-[#5f493a]">
+          <span className="text-[#211b18]">Service:</span> Dinner
         </div>
       </div>
 
@@ -151,6 +155,7 @@ export default function BookingForm() {
           <Field label="City" htmlFor="city">
             <select
               id="city"
+              aria-label="Select city"
               name="city"
               value={formData.city}
               onChange={handleChange}
@@ -166,6 +171,7 @@ export default function BookingForm() {
           <Field label="Restaurant" htmlFor="restaurantId">
             <select
               id="restaurantId"
+              aria-label="Select restaurant"
               name="restaurantId"
               value={formData.restaurantId}
               onChange={handleChange}
@@ -188,6 +194,7 @@ export default function BookingForm() {
           <Field label="Date" htmlFor="date">
             <input
               id="date"
+              aria-label="Reservation date"
               type="date"
               name="date"
               value={formData.date}
@@ -199,6 +206,7 @@ export default function BookingForm() {
           <Field label="Time" htmlFor="time">
             <input
               id="time"
+              aria-label="Reservation time"
               type="time"
               name="time"
               value={formData.time}
@@ -210,6 +218,7 @@ export default function BookingForm() {
           <Field label="Guests" htmlFor="guests">
             <input
               id="guests"
+              aria-label="Number of guests"
               type="number"
               name="guests"
               value={formData.guests}
@@ -225,6 +234,7 @@ export default function BookingForm() {
           <Field label="Guest name" htmlFor="name">
             <input
               id="name"
+              aria-label="Guest name"
               type="text"
               name="name"
               value={formData.name}
@@ -237,6 +247,7 @@ export default function BookingForm() {
           <Field label="Contact number" htmlFor="contact">
             <input
               id="contact"
+              aria-label="Contact number"
               type="tel"
               name="contact"
               value={formData.contact}
@@ -253,14 +264,14 @@ export default function BookingForm() {
             type="button"
             onClick={handleCheckAvailability}
             disabled={isChecking || isBooking}
-            className="rounded-lg border border-[#255647] bg-white px-4 py-3 text-sm font-bold text-[#255647] transition hover:bg-[#edf6f2] disabled:cursor-not-allowed disabled:border-[#b8c9c1] disabled:text-[#8ca099]"
+            className="rounded-2xl border border-[#255647] bg-white/85 px-4 py-4 text-sm font-black text-[#255647] transition hover:-translate-y-0.5 hover:bg-[#edf6f2] disabled:cursor-not-allowed disabled:translate-y-0 disabled:border-[#b8c9c1] disabled:text-[#8ca099]"
           >
             {isChecking ? "Checking..." : "Check Availability"}
           </button>
           <button
             type="submit"
             disabled={isBooking || isChecking}
-            className="rounded-lg bg-[#255647] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-[#255647]/20 transition hover:bg-[#1f473c] disabled:cursor-not-allowed disabled:bg-[#92aaa1]"
+            className="rounded-2xl bg-[#255647] px-4 py-4 text-sm font-black text-white shadow-lg shadow-[#255647]/25 transition hover:-translate-y-0.5 hover:bg-[#1f473c] disabled:cursor-not-allowed disabled:translate-y-0 disabled:bg-[#92aaa1]"
           >
             {isBooking ? "Booking..." : "Confirm Booking"}
           </button>
@@ -269,7 +280,7 @@ export default function BookingForm() {
 
       {statusMessage && (
         <div
-          className={`mt-5 rounded-lg border px-4 py-3 text-sm font-medium ${
+          className={`mt-5 rounded-2xl border px-4 py-3 text-sm font-bold ${
             statusKind === "success"
               ? "border-[#b7d7c2] bg-[#edf8f0] text-[#255647]"
               : "border-[#edd1aa] bg-[#fff5e5] text-[#81521f]"
@@ -280,7 +291,7 @@ export default function BookingForm() {
       )}
 
       {availableSlots.length > 0 && (
-        <div className="mt-5 rounded-lg border border-[#d9cbb7] bg-white p-4">
+        <div className="mt-5 rounded-2xl border border-[#d9cbb7] bg-white/85 p-4">
           <h3 className="text-base font-bold text-[#211b18]">
             Available Slots
           </h3>
@@ -288,7 +299,7 @@ export default function BookingForm() {
             {availableSlots.map((slot) => (
               <span
                 key={slot}
-                className="rounded-lg bg-[#255647] px-3 py-2 text-sm font-bold text-white"
+                className="rounded-full bg-[#255647] px-3 py-2 text-sm font-black text-white"
               >
                 {slot}
               </span>
@@ -298,7 +309,7 @@ export default function BookingForm() {
       )}
 
       {bookingSummary && (
-        <div className="mt-5 rounded-lg border border-[#b7d7c2] bg-[#edf8f0] p-4">
+        <div className="mt-5 rounded-2xl border border-[#b7d7c2] bg-[#edf8f0] p-4">
           <h3 className="text-base font-bold text-[#255647]">
             Booking Confirmed
           </h3>

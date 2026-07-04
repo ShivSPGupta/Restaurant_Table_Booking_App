@@ -41,6 +41,10 @@ export function getPrismaErrorMessage(error: unknown): string | null {
     return "Cannot reach Supabase database. Check POSTGRES_PRISMA_URL in Vercel.";
   }
 
+  if (details.code === "P2002") {
+    return "A record with these unique details already exists.";
+  }
+
   const driverError = details.meta?.driverAdapterError as
     | { cause?: { kind?: string; reason?: string } }
     | undefined;

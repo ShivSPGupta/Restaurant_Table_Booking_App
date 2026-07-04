@@ -1,7 +1,8 @@
 "use client";
 
-import type { ChangeEvent, FormEvent } from "react";
-import { useState } from "react";
+import type { ChangeEvent, SubmitEvent } from "react";
+import { useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import {
   getApiErrorMessage,
   loginRestaurant,
@@ -11,6 +12,12 @@ import {
   type AuthResponse,
   type RestaurantAuthPayload,
 } from "@/lib/api";
+import {
+  clearAuthSession,
+  getStoredAuthSession,
+  saveAuthSession,
+  subscribeToAuthSessionChanges,
+} from "@/lib/authSessionStore";
 import { indiaCities } from "@/lib/indiaCities";
 
 const initialFormData: RestaurantAuthPayload = {
@@ -27,25 +34,47 @@ const initialFormData: RestaurantAuthPayload = {
 type AuthMode = "register" | "login";
 type AccountType = "restaurant" | "user";
 
+const accountOptions: Array<{
+  type: AccountType;
+  title: string;
+  description: string;
+}> = [
+  {
+    type: "restaurant",
+    title: "Restaurant",
+    description: "Manage bookings, tables, hours, and event spaces.",
+  },
+  {
+    type: "user",
+    title: "Guest",
+    description: "Find restaurants by city and reserve your table.",
+  },
+];
+
+const modeOptions: Array<{ mode: AuthMode; label: string }> = [
+  { mode: "register", label: "Create account" },
+  { mode: "login", label: "Sign in" },
+];
+
 export default function RestaurantAuthCard() {
   const [mode, setMode] = useState<AuthMode>("register");
   const [accountType, setAccountType] = useState<AccountType>("restaurant");
   const [formData, setFormData] =
     useState<RestaurantAuthPayload>(initialFormData);
-  const [authSession, setAuthSession] = useState<AuthResponse | null>(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    const storedSession = window.localStorage.getItem("restaurant-auth-session");
-
-    return storedSession ? (JSON.parse(storedSession) as AuthResponse) : null;
-  });
+  const authSession = useSyncExternalStore(
+    subscribeToAuthSessionChanges,
+    getStoredAuthSession,
+    () => null
+  );
   const [statusMessage, setStatusMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const activeProfile = authSession?.restaurant || authSession?.user;
+  const activeRole =
+    authSession?.role === "restaurant" ? "Restaurant owner" : "Guest user";
+
   const handleChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     setFormData({ ...formData, [event.target.name]: event.target.value });
   };
@@ -61,12 +90,11 @@ export default function RestaurantAuthCard() {
   };
 
   const handleLogout = () => {
-    window.localStorage.removeItem("restaurant-auth-session");
-    setAuthSession(null);
-    setStatusMessage("Logged out from restaurant account.");
+    clearAuthSession();
+    setStatusMessage("Signed out successfully.");
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
     setStatusMessage("");
@@ -81,20 +109,16 @@ export default function RestaurantAuthCard() {
             ? await loginRestaurant(formData)
             : await loginUser(formData);
 
-      window.localStorage.setItem(
-        "restaurant-auth-session",
-        JSON.stringify(response)
-      );
-      setAuthSession(response);
+      saveAuthSession(response);
       setFormData(initialFormData);
       setStatusMessage(
         mode === "register"
-          ? "Restaurant account created successfully."
-          : "Logged in successfully."
+          ? `${accountType === "restaurant" ? "Restaurant" : "Guest"} account created successfully.`
+          : "Signed in successfully."
       );
     } catch (error) {
       setStatusMessage(
-        getApiErrorMessage(error, "Restaurant authentication failed.")
+        getApiErrorMessage(error, "Authentication failed. Please try again.")
       );
     } finally {
       setIsSubmitting(false);
@@ -102,198 +126,274 @@ export default function RestaurantAuthCard() {
   };
 
   return (
-    <div className="rounded-2xl border border-white/15 bg-white/[0.13] p-4 shadow-xl shadow-black/10 backdrop-blur">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="rounded-[2rem] border border-white/70 bg-white/75 p-4 text-[#211b18] shadow-2xl shadow-[#6d4d2d]/12 backdrop-blur-xl sm:p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-[#f4d7a6]">
-            Restaurant access
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#9b6630]">
+            Secure access
           </p>
-          <p className="mt-1 text-sm leading-5 text-white/70">
-            Login as a guest user or restaurant owner.
+          <h2 className="mt-2 text-2xl font-black tracking-[-0.03em]">
+            {authSession ? "Account active" : "Join the booking desk"}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[#6f5b48]">
+            {authSession
+              ? "Your session is ready for booking and restaurant tools."
+              : "Create an account or sign in with the role that matches your workflow."}
           </p>
         </div>
+
         {authSession && (
           <button
             type="button"
             onClick={handleLogout}
-            className="rounded-lg border border-white/25 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white/80 transition hover:bg-white/10"
+            className="rounded-full border border-[#d9c3a6] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#4a392d] transition hover:border-[#ba7b37] hover:bg-[#fff8ee]"
           >
             Logout
           </button>
         )}
       </div>
 
-      {authSession ? (
-        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-[#f4b563]/30 bg-[#f4b563]/15 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-bold text-[#f4d7a6]">
-            {authSession.restaurant?.name || authSession.user?.name}
-          </p>
-            <p className="mt-1 text-sm text-white/70">
-              {authSession.restaurant?.email || authSession.user?.email}
+      {authSession && activeProfile ? (
+        <div className="mt-5 overflow-hidden rounded-2xl border border-[#ead7bb] bg-white shadow-sm">
+          <div className="bg-[#1f322a] px-4 py-3 text-white">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#f4b563]">
+              {activeRole}
             </p>
-            <p className="mt-2 break-all text-xs text-white/55">
-              ID: {authSession.restaurant?.id || authSession.user?.id}
-            </p>
+            <p className="mt-1 text-lg font-black">{activeProfile.name}</p>
           </div>
-          <span className="rounded-full bg-[#f4b563] px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#211b18]">
-            Active
-          </span>
+          <div className="space-y-3 p-4 text-sm text-[#5c4a3a]">
+            <p>{activeProfile.email}</p>
+            <p className="break-all rounded-xl bg-[#f6ead8] px-3 py-2 text-xs">
+              ID: {activeProfile.id}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex rounded-full bg-[#dcf4df] px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#255647]">
+                Active session
+              </span>
+              {authSession.role === "restaurant" && (
+                <Link
+                  href="/dashboard"
+                  className="inline-flex rounded-full bg-[#1f322a] px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#f4b563]"
+                >
+                  Open dashboard
+                </Link>
+              )}
+            </div>
+          </div>
         </div>
       ) : (
         <>
-          <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-black/15 p-1">
-            <button
-              type="button"
-              onClick={() => handleAccountTypeChange("restaurant")}
-              className={`rounded-md px-3 py-2 text-sm font-bold transition ${
-                accountType === "restaurant"
-                  ? "bg-white text-[#1f322a]"
-                  : "text-white/70 hover:bg-white/10"
-              }`}
-            >
-              Restaurant
-            </button>
-            <button
-              type="button"
-              onClick={() => handleAccountTypeChange("user")}
-              className={`rounded-md px-3 py-2 text-sm font-bold transition ${
-                accountType === "user"
-                  ? "bg-white text-[#1f322a]"
-                  : "text-white/70 hover:bg-white/10"
-              }`}
-            >
-              User
-            </button>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {accountOptions.map((option) => {
+              const isActive = accountType === option.type;
+
+              return (
+                <button
+                  key={option.type}
+                  type="button"
+                  onClick={() => handleAccountTypeChange(option.type)}
+                  className={`rounded-[1.35rem] border p-4 text-left transition ${
+                    isActive
+                      ? "border-[#255647] bg-[#1f322a] text-white shadow-lg shadow-[#1f322a]/20"
+                      : "border-[#ead7bb] bg-white text-[#211b18] hover:border-[#ba7b37]"
+                  }`}
+                >
+                  <span className="text-sm font-black">{option.title}</span>
+                  <span
+                    className={`mt-2 block text-xs leading-5 ${
+                      isActive ? "text-white/70" : "text-[#7a6654]"
+                    }`}
+                  >
+                    {option.description}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-black/15 p-1">
-            <button
-              type="button"
-              onClick={() => handleModeChange("register")}
-              className={`rounded-md px-3 py-2 text-sm font-bold transition ${
-                mode === "register"
-                  ? "bg-[#f4b563] text-[#211b18]"
-                  : "text-white/70 hover:bg-white/10"
-              }`}
-            >
-              Register
-            </button>
-            <button
-              type="button"
-              onClick={() => handleModeChange("login")}
-              className={`rounded-md px-3 py-2 text-sm font-bold transition ${
-                mode === "login"
-                  ? "bg-[#f4b563] text-[#211b18]"
-                  : "text-white/70 hover:bg-white/10"
-              }`}
-            >
-              Login
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-            {mode === "register" && (
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                placeholder={accountType === "restaurant" ? "Restaurant name" : "Your name"}
-                className="auth-input"
-              />
-            )}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                placeholder="owner@restaurant.com"
-                className="auth-input"
-              />
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                minLength={8}
-                placeholder="Password"
-                className="auth-input"
-              />
-            </div>
-            {mode === "register" && accountType === "restaurant" && (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  placeholder="Phone"
-                  className="auth-input"
-                />
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  placeholder="Address"
-                  className="auth-input"
-                />
-              </div>
-            )}
-            {mode === "register" && accountType === "restaurant" && (
-              <select
-                name="city"
-                value={formData.city}
-                onChange={handleChange}
-                className="auth-input"
+          <div className="mt-4 grid grid-cols-2 gap-1 rounded-full border border-[#e0c8a8] bg-[#ead7bb]/70 p-1">
+            {modeOptions.map((option) => (
+              <button
+                key={option.mode}
+                type="button"
+                onClick={() => handleModeChange(option.mode)}
+                className={`rounded-full px-3 py-2 text-sm font-black transition ${
+                  mode === option.mode
+                    ? "bg-[#f4b563] text-[#211b18] shadow-sm"
+                    : "text-[#6f5b48] hover:bg-white/60"
+                }`}
               >
-                {indiaCities.map((city) => (
-                  <option key={city} value={city}>
-                    {city}
-                  </option>
-                ))}
-              </select>
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+            {mode === "register" && (
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-[#7a5230]">
+                  {accountType === "restaurant"
+                    ? "Restaurant name"
+                    : "Your name"}
+                </span>
+                <input
+                  aria-label={
+                    accountType === "restaurant" ? "Restaurant name" : "Your name"
+                  }
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  placeholder={
+                    accountType === "restaurant" ? "The Green Fork" : "Asha"
+                  }
+                  className="auth-input"
+                />
+              </label>
             )}
+
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-[#7a5230]">
+                  Email
+                </span>
+                <input
+                  aria-label="Email address"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  placeholder={
+                    accountType === "restaurant"
+                      ? "owner@restaurant.com"
+                      : "you@example.com"
+                  }
+                  className="auth-input"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-[#7a5230]">
+                  Password
+                </span>
+                <input
+                  aria-label="Password"
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  minLength={8}
+                  placeholder="Minimum 8 characters"
+                  className="auth-input"
+                />
+              </label>
+            </div>
+
             {mode === "register" && accountType === "restaurant" && (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  type="time"
-                  name="openingTime"
-                  value={formData.openingTime}
-                  onChange={handleChange}
-                  className="auth-input"
-                />
-                <input
-                  type="time"
-                  name="closingTime"
-                  value={formData.closingTime}
-                  onChange={handleChange}
-                  className="auth-input"
-                />
-              </div>
+              <>
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-[#7a5230]">
+                      Phone
+                    </span>
+                    <input
+                      aria-label="Restaurant phone"
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      placeholder="+91 98765 43210"
+                      className="auth-input"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-[#7a5230]">
+                      City
+                    </span>
+                    <select
+                      aria-label="Select restaurant city"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleChange}
+                      className="auth-input"
+                    >
+                      {indiaCities.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-[#7a5230]">
+                    Address
+                  </span>
+                  <input
+                    aria-label="Restaurant address"
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    placeholder="12 Market Street"
+                    className="auth-input"
+                  />
+                </label>
+
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-[#7a5230]">
+                      Opens
+                    </span>
+                    <input
+                      aria-label="Restaurant opening time"
+                      type="time"
+                      name="openingTime"
+                      value={formData.openingTime}
+                      onChange={handleChange}
+                      className="auth-input"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-[#7a5230]">
+                      Closes
+                    </span>
+                    <input
+                      aria-label="Restaurant closing time"
+                      type="time"
+                      name="closingTime"
+                      value={formData.closingTime}
+                      onChange={handleChange}
+                      className="auth-input"
+                    />
+                  </label>
+                </div>
+              </>
             )}
+
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full rounded-lg bg-[#f4b563] px-4 py-3 text-sm font-bold text-[#211b18] shadow-lg shadow-black/10 transition hover:bg-[#ffd18a] disabled:cursor-not-allowed disabled:bg-[#d8a76b]"
+              className="w-full rounded-2xl bg-[#f4b563] px-4 py-4 text-sm font-black text-[#211b18] shadow-lg shadow-[#9b6630]/20 transition hover:-translate-y-0.5 hover:bg-[#ffd18a] disabled:cursor-not-allowed disabled:translate-y-0 disabled:bg-[#d8a76b]"
             >
               {isSubmitting
                 ? "Please wait..."
                 : mode === "register"
-                  ? `Create ${accountType} account`
-                  : `Login as ${accountType}`}
+                  ? `Create ${accountType === "restaurant" ? "restaurant" : "guest"} account`
+                  : `Sign in as ${accountType === "restaurant" ? "restaurant" : "guest"}`}
             </button>
           </form>
         </>
       )}
 
       {statusMessage && (
-        <p className="mt-3 text-sm font-medium text-[#f4d7a6]">
+        <p className="mt-4 rounded-2xl border border-[#ead7bb] bg-white px-4 py-3 text-sm font-bold text-[#6f4b27]">
           {statusMessage}
         </p>
       )}

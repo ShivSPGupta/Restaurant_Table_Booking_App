@@ -32,7 +32,7 @@ export const requireAuth: RequestHandler = (req, _res, next) => {
       : "";
 
     if (!token) {
-      throw new AppError("Restaurant login is required.", 401);
+      throw new AppError("Login is required.", 401);
     }
 
     const [header, payload, signature] = token.split(".");

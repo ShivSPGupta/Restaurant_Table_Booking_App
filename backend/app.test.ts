@@ -256,7 +256,7 @@ test("availability is true before a reservation exists", async () => {
   assert.deepEqual(response.body.slots, ["19:00"]);
 });
 
-test("reservation endpoints require restaurant login", async () => {
+test("reservation endpoints require login", async () => {
   const response = await makeRequest<{ error: string }>(
     "/api/check-availability",
     "POST",
@@ -268,7 +268,39 @@ test("reservation endpoints require restaurant login", async () => {
 
   assert.equal(response.statusCode, 401);
   assert.ok(response.body);
-  assert.equal(response.body.error, "Restaurant login is required.");
+  assert.equal(response.body.error, "Login is required.");
+});
+
+test("duplicate restaurant tables are rejected", async () => {
+  const { token } = await registerTestRestaurant();
+  const table = {
+    name: "Table 1",
+    capacity: 4,
+  };
+
+  const createdResponse = await makeRequest(
+    "/api/restaurant/tables",
+    "POST",
+    table,
+    authHeaders(token)
+  );
+  const duplicateResponse = await makeRequest<{ error: string }>(
+    "/api/restaurant/tables",
+    "POST",
+    {
+      ...table,
+      name: " table 1 ",
+    },
+    authHeaders(token)
+  );
+
+  assert.equal(createdResponse.statusCode, 201);
+  assert.equal(duplicateResponse.statusCode, 409);
+  assert.ok(duplicateResponse.body);
+  assert.equal(
+    duplicateResponse.body.error,
+    "A table with this name already exists."
+  );
 });
 
 test("booking a table persists the reservation", async () => {
@@ -299,6 +331,54 @@ test("booking a table persists the reservation", async () => {
   assert.equal(storedReservations.length, 1);
   assert.equal(storedReservations[0].name, "Asha");
   assert.equal(storedReservations[0].restaurantId, restaurant.id);
+});
+
+test("restaurant can modify and cancel its reservation", async () => {
+  const { token } = await registerTestRestaurant();
+  const bookingResponse = await makeRequest<{ id: string; guests: number }>(
+    "/api/book-table",
+    "POST",
+    {
+      date: "2026-07-15",
+      time: "19:00",
+      guests: 4,
+      name: "Asha",
+      contact: "9999999999",
+    },
+    authHeaders(token)
+  );
+
+  assert.equal(bookingResponse.statusCode, 201);
+  assert.ok(bookingResponse.body);
+
+  const updateResponse = await makeRequest<{ guests: number; time: string }>(
+    `/api/restaurant/reservations/${bookingResponse.body.id}`,
+    "PATCH",
+    {
+      time: "20:00",
+      guests: 5,
+    },
+    authHeaders(token)
+  );
+
+  assert.equal(updateResponse.statusCode, 200);
+  assert.ok(updateResponse.body);
+  assert.equal(updateResponse.body.time, "20:00");
+  assert.equal(updateResponse.body.guests, 5);
+
+  const cancelResponse = await makeRequest(
+    `/api/restaurant/reservations/${bookingResponse.body.id}`,
+    "DELETE",
+    undefined,
+    authHeaders(token)
+  );
+
+  assert.equal(cancelResponse.statusCode, 204);
+
+  const reservations = JSON.parse(
+    fs.readFileSync(path.join(tempDir, "reservations.json"), "utf8")
+  );
+  assert.equal(reservations.length, 0);
 });
 
 test("duplicate bookings are rejected", async () => {

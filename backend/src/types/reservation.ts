@@ -43,4 +43,13 @@ export type ReservationRepository = {
     time: string
   ) => Promise<Reservation | null | undefined> | Reservation | null | undefined;
   create: (reservation: Reservation) => Promise<Reservation> | Reservation;
+  update: (
+    restaurantId: string,
+    reservationId: string,
+    updates: Partial<Pick<Reservation, "tableId" | "date" | "time" | "guests" | "name" | "contact">>
+  ) => Promise<Reservation | null | undefined> | Reservation | null | undefined;
+  delete: (
+    restaurantId: string,
+    reservationId: string
+  ) => Promise<boolean> | boolean;
 };

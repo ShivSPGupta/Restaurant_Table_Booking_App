@@ -21,6 +21,33 @@ function createRestaurantManagementController(
     }
   };
 
+  const updateReservation: RequestHandler = async (req, res, next) => {
+    try {
+      const { restaurantId } = req as AuthenticatedRequest;
+      const reservation = await restaurantManagementService.updateReservation(
+        restaurantId as string,
+        req.params.reservationId as string,
+        req.body
+      );
+      res.json(reservation);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  const cancelReservation: RequestHandler = async (req, res, next) => {
+    try {
+      const { restaurantId } = req as AuthenticatedRequest;
+      await restaurantManagementService.cancelReservation(
+        restaurantId as string,
+        req.params.reservationId as string
+      );
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
+
   const listTables: RequestHandler = async (req, res, next) => {
     try {
       const { restaurantId } = req as AuthenticatedRequest;
@@ -100,6 +127,8 @@ function createRestaurantManagementController(
 
   return {
     listReservations,
+    updateReservation,
+    cancelReservation,
     listTables,
     createTable,
     listEventSpaces,

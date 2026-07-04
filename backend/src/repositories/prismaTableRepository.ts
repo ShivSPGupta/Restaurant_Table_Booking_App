@@ -5,6 +5,7 @@ type PrismaTable = {
   id: string;
   restaurantId: string;
   name: string;
+  normalizedName?: string | null;
   capacity: number;
   isActive: boolean;
   createdAt: Date;
@@ -12,9 +13,17 @@ type PrismaTable = {
 
 function mapTable(table: PrismaTable): RestaurantTable {
   return {
-    ...table,
+    id: table.id,
+    restaurantId: table.restaurantId,
+    name: table.name,
+    capacity: table.capacity,
+    isActive: table.isActive,
     createdAt: table.createdAt.toISOString(),
   };
+}
+
+function normalizeTableName(name: string): string {
+  return name.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
 function createPrismaTableRepository(): TableRepository {
@@ -35,10 +44,11 @@ function createPrismaTableRepository(): TableRepository {
         id: table.id,
         restaurantId: table.restaurantId,
         name: table.name,
+        normalizedName: normalizeTableName(table.name),
         capacity: table.capacity,
         isActive: table.isActive,
         createdAt: new Date(table.createdAt),
-      },
+      } as any,
     });
 
     return mapTable(createdTable);
@@ -59,7 +69,12 @@ function createPrismaTableRepository(): TableRepository {
 
     const updatedTable = await prisma.table.update({
       where: { id: tableId },
-      data: updates,
+      data: {
+        ...updates,
+        ...(updates.name !== undefined
+          ? { normalizedName: normalizeTableName(updates.name) }
+          : {}),
+      } as any,
     });
 
     return mapTable(updatedTable);

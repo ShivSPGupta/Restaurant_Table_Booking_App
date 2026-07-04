@@ -13,6 +13,14 @@ function createRestaurantManagementRoutes(
 
   router.use(requireRestaurantAuth);
   router.get("/reservations", restaurantManagementController.listReservations);
+  router.patch(
+    "/reservations/:reservationId",
+    restaurantManagementController.updateReservation
+  );
+  router.delete(
+    "/reservations/:reservationId",
+    restaurantManagementController.cancelReservation
+  );
   router.get("/tables", restaurantManagementController.listTables);
   router.post("/tables", restaurantManagementController.createTable);
   router.patch("/tables/:tableId", restaurantManagementController.updateTable);

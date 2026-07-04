@@ -3,6 +3,7 @@ import axios, { AxiosError } from "axios";
 export type ReservationPayload = {
   city?: string;
   restaurantId?: string;
+  tableId?: string;
   date: string;
   time: string;
   guests: string;
@@ -196,6 +197,30 @@ export async function getRestaurantReservations(): Promise<Reservation[]> {
   return response.data;
 }
 
+export async function getMyReservations(): Promise<Reservation[]> {
+  const response = await apiClient.get<Reservation[]>("/api/reservations");
+  return response.data;
+}
+
+export async function updateRestaurantReservation(
+  reservationId: string,
+  payload: Partial<
+    Pick<ReservationPayload, "tableId" | "date" | "time" | "guests" | "name" | "contact">
+  >
+): Promise<Reservation> {
+  const response = await apiClient.patch<Reservation>(
+    `/api/restaurant/reservations/${reservationId}`,
+    payload
+  );
+  return response.data;
+}
+
+export async function cancelRestaurantReservation(
+  reservationId: string
+): Promise<void> {
+  await apiClient.delete(`/api/restaurant/reservations/${reservationId}`);
+}
+
 export async function getRestaurantTables(): Promise<RestaurantTable[]> {
   const response = await apiClient.get<RestaurantTable[]>("/api/restaurant/tables");
   return response.data;
@@ -207,6 +232,21 @@ export async function createRestaurantTable(payload: {
 }): Promise<RestaurantTable> {
   const response = await apiClient.post<RestaurantTable>(
     "/api/restaurant/tables",
+    payload
+  );
+  return response.data;
+}
+
+export async function updateRestaurantTable(
+  tableId: string,
+  payload: {
+    name?: string;
+    capacity?: string;
+    isActive?: boolean;
+  }
+): Promise<RestaurantTable> {
+  const response = await apiClient.patch<RestaurantTable>(
+    `/api/restaurant/tables/${tableId}`,
     payload
   );
   return response.data;

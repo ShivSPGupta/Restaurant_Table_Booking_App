@@ -1,14 +1,16 @@
 # Restaurant Table Booking
 
-A production-style full-stack restaurant reservation platform built with Next.js, Express, TypeScript, Prisma, and Supabase PostgreSQL. Users can discover restaurants by Indian city, check availability, and create bookings. Restaurants can register, manage tables, configure opening hours, add event or celebration spaces, and view their own reservations.
+A production-style full-stack restaurant reservation platform built with Next.js, Express, TypeScript, Prisma, and Supabase PostgreSQL. Users can discover restaurants by Indian city, check availability, create bookings after login, and view their booking history. Restaurants can register, manage tables, configure opening hours, add event or celebration spaces, and manage their own reservations.
 
 ## Features
 
 - Role-based authentication for `user` and `restaurant` accounts.
 - City-based restaurant discovery before booking.
-- Availability checks scoped to the selected restaurant.
-- User and restaurant booking flow.
+- Login-required availability checks and booking flow.
+- User dashboard for personal booking history.
 - Restaurant dashboard for reservations, tables, event spaces, and business hours.
+- Restaurant booking management with modify and cancel actions.
+- Table management with add, modify, activate/deactivate, and duplicate-name protection.
 - Supabase PostgreSQL integration through Prisma.
 - Dedicated PostgreSQL schema and prefixed tables to safely share one Supabase project with other apps.
 - Swagger/OpenAPI documentation for backend APIs.
@@ -88,6 +90,8 @@ restaurant_booking.restaurant_booking_tables
 restaurant_booking.restaurant_booking_event_spaces
 ```
 
+Table names are protected against duplicates per restaurant with a normalized name column and database unique constraint. This prevents duplicate names such as `Table 1`, ` table 1 `, and `TABLE 1` from being stored as separate tables.
+
 Use two database URLs:
 
 ```text
@@ -139,6 +143,14 @@ Backend:  http://localhost:3001
 Docs:     http://localhost:3001/api/docs
 ```
 
+Frontend routes:
+
+```text
+/          Guest booking page
+/auth      User and restaurant login/register
+/dashboard Role-based dashboard
+```
+
 ## Available Scripts
 
 Backend:
@@ -184,7 +196,7 @@ POST /api/auth/restaurant/register
 POST /api/auth/restaurant/login
 ```
 
-Public booking flow:
+Booking flow:
 
 ```text
 GET  /api/restaurants?city=Mumbai
@@ -193,10 +205,14 @@ POST /api/book-table
 GET  /api/reservations
 ```
 
+`GET /api/restaurants` is public. Availability checks, booking, and reservation history require login with either a user or restaurant token.
+
 Restaurant management:
 
 ```text
 GET   /api/restaurant/reservations
+PATCH /api/restaurant/reservations/:reservationId
+DELETE /api/restaurant/reservations/:reservationId
 GET   /api/restaurant/tables
 POST  /api/restaurant/tables
 PATCH /api/restaurant/tables/:tableId
@@ -212,6 +228,14 @@ Authorization: Bearer <token>
 ```
 
 Restaurants can only access their own reservations, tables, event spaces, and availability settings. Users can create bookings for selected restaurants and view bookings linked to their own account.
+
+Dashboard behavior:
+
+```text
+Logged-in user       -> sees personal booking history
+Logged-in restaurant -> sees reservation, table, event space, and hours management
+Not logged in        -> must login before checking availability or booking
+```
 
 ## Deployment
 
@@ -247,3 +271,4 @@ npm run db:push
 - Keep `POSTGRES_PRISMA_URL` pointed at the Supabase pooler for serverless runtime.
 - Keep `POSTGRES_URL_NON_POOLING` pointed at the direct Supabase host for Prisma schema commands.
 - Add `SUPABASE_CA_CERT` when you want strict database certificate verification in production.
+- Keep validation in both frontend and backend. Frontend validation gives fast feedback, backend validation protects the API, and database constraints protect against race conditions.
