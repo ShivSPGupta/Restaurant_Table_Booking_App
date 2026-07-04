@@ -46,6 +46,31 @@ function createRestaurantManagementController(
     }
   };
 
+  const listEventSpaces: RequestHandler = async (req, res, next) => {
+    try {
+      const { restaurantId } = req as AuthenticatedRequest;
+      const spaces = await restaurantManagementService.listEventSpaces(
+        restaurantId as string
+      );
+      res.json(spaces);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  const createEventSpace: RequestHandler = async (req, res, next) => {
+    try {
+      const { restaurantId } = req as AuthenticatedRequest;
+      const space = await restaurantManagementService.createEventSpace(
+        restaurantId as string,
+        req.body
+      );
+      res.status(201).json(space);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   const updateTable: RequestHandler = async (req, res, next) => {
     try {
       const { restaurantId } = req as AuthenticatedRequest;
@@ -77,6 +102,8 @@ function createRestaurantManagementController(
     listReservations,
     listTables,
     createTable,
+    listEventSpaces,
+    createEventSpace,
     updateTable,
     updateAvailability,
   };

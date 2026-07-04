@@ -4,6 +4,7 @@ export type Restaurant = {
   email: string;
   phone?: string | null;
   address?: string | null;
+  city: string;
   openingTime: string;
   closingTime: string;
   createdAt: string;
@@ -19,6 +20,7 @@ export type RegisterRestaurantRequest = {
   password?: string;
   phone?: string;
   address?: string;
+  city?: string;
   openingTime?: string;
   closingTime?: string;
 };
@@ -31,6 +33,9 @@ export type RestaurantRepository = {
     | RestaurantRecord
     | null
     | undefined;
+  findPublic: (
+    city?: string
+  ) => Promise<Restaurant[]> | Restaurant[];
   create: (
     restaurant: RestaurantRecord
   ) => Promise<RestaurantRecord> | RestaurantRecord;

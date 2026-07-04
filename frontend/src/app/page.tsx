@@ -1,5 +1,6 @@
 import BookingForm from "@/components/BookingForm";
 import RestaurantAuthCard from "@/components/RestaurantAuthCard";
+import RestaurantManagementPanel from "@/components/RestaurantManagementPanel";
 
 export default function Home() {
   return (
@@ -55,7 +56,10 @@ export default function Home() {
           </div>
         </div>
 
-        <BookingForm />
+        <div>
+          <BookingForm />
+          <RestaurantManagementPanel />
+        </div>
       </section>
     </main>
   );

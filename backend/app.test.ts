@@ -88,6 +88,7 @@ async function registerTestRestaurant(email = "owner@greenfork.test") {
     restaurant: { id: string; email: string };
   }>("/api/auth/register", "POST", {
     name: "The Green Fork",
+    city: "Mumbai",
     email,
     password: "securepass123",
   });
@@ -177,6 +178,7 @@ test("restaurant register creates an account and returns a token", async () => {
     restaurant: { name: string; email: string; passwordHash?: string };
   }>("/api/auth/register", "POST", {
     name: "The Green Fork",
+    city: "Mumbai",
     email: "owner@greenfork.test",
     password: "securepass123",
     phone: "9999999999",
@@ -199,6 +201,7 @@ test("restaurant login returns the existing account", async () => {
 
   await makeRequest("/api/auth/register", "POST", {
     name: "The Green Fork",
+    city: "Mumbai",
     ...credentials,
   });
   const response = await makeRequest<{
@@ -215,6 +218,7 @@ test("restaurant login returns the existing account", async () => {
 test("duplicate restaurant register is rejected", async () => {
   const restaurant = {
     name: "The Green Fork",
+    city: "Mumbai",
     email: "owner@greenfork.test",
     password: "securepass123",
   };

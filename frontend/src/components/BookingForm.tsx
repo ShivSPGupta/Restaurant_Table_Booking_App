@@ -1,16 +1,20 @@
 "use client";
 
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   bookTable,
   checkAvailability,
+  getRestaurants,
   getApiErrorMessage,
+  type Restaurant,
   type Reservation,
   type ReservationPayload,
 } from "@/lib/api";
+import { indiaCities } from "@/lib/indiaCities";
 
 const initialFormData: ReservationPayload = {
+  city: "Mumbai",
   restaurantId: "",
   date: "",
   time: "",
@@ -25,18 +29,51 @@ export default function BookingForm() {
   const [formData, setFormData] = useState<ReservationPayload>(initialFormData);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [bookingSummary, setBookingSummary] = useState<Reservation | null>(null);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusKind, setStatusKind] = useState<StatusKind>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
 
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadRestaurants() {
+      try {
+        const cityRestaurants = await getRestaurants(formData.city);
+
+        if (isMounted) {
+          setRestaurants(cityRestaurants);
+          setFormData((currentFormData) => ({
+            ...currentFormData,
+            restaurantId: cityRestaurants[0]?.id || "",
+          }));
+        }
+      } catch {
+        if (isMounted) {
+          setRestaurants([]);
+          setFormData((currentFormData) => ({
+            ...currentFormData,
+            restaurantId: "",
+          }));
+        }
+      }
+    }
+
+    loadRestaurants();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.city]);
+
+  const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [event.target.name]: event.target.value });
   };
 
   const handleCheckAvailability = async () => {
-    if (!formData.date || !formData.time) {
-      setStatusMessage("Choose a date and time before checking availability.");
+    if (!formData.restaurantId || !formData.date || !formData.time) {
+      setStatusMessage("Choose a city, restaurant, date, and time first.");
       setStatusKind("warning");
       setAvailableSlots([]);
       return;
@@ -45,6 +82,7 @@ export default function BookingForm() {
     setIsChecking(true);
     try {
       const availability = await checkAvailability({
+        restaurantId: formData.restaurantId,
         date: formData.date,
         time: formData.time,
       });
@@ -109,17 +147,42 @@ export default function BookingForm() {
       </div>
 
       <form onSubmit={handleBooking} className="mt-6 space-y-5">
-        <Field label="Restaurant ID (for user bookings)" htmlFor="restaurantId">
-          <input
-            id="restaurantId"
-            type="text"
-            name="restaurantId"
-            value={formData.restaurantId}
-            onChange={handleChange}
-            placeholder="Required when logged in as a user"
-            className="booking-input"
-          />
-        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="City" htmlFor="city">
+            <select
+              id="city"
+              name="city"
+              value={formData.city}
+              onChange={handleChange}
+              className="booking-input"
+            >
+              {indiaCities.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Restaurant" htmlFor="restaurantId">
+            <select
+              id="restaurantId"
+              name="restaurantId"
+              value={formData.restaurantId}
+              onChange={handleChange}
+              required
+              className="booking-input"
+            >
+              <option value="">
+                {restaurants.length ? "Select restaurant" : "No restaurants yet"}
+              </option>
+              {restaurants.map((restaurant) => (
+                <option key={restaurant.id} value={restaurant.id}>
+                  {restaurant.name} ({restaurant.openingTime}-{restaurant.closingTime})
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Date" htmlFor="date">

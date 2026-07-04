@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import type {
+  Restaurant,
   RestaurantRecord,
   RestaurantRepository,
 } from "../types/restaurant";
@@ -43,6 +44,19 @@ function createFileRestaurantRepository(dataDir: string): RestaurantRepository {
     return findAll().find((restaurant) => restaurant.email === email);
   }
 
+  function toPublicRestaurant(restaurant: RestaurantRecord): Restaurant {
+    const { passwordHash, ...publicRestaurant } = restaurant;
+    return publicRestaurant;
+  }
+
+  function findPublic(city?: string): Restaurant[] {
+    return findAll()
+      .filter((restaurant) =>
+        city ? restaurant.city.toLowerCase() === city.toLowerCase() : true
+      )
+      .map(toPublicRestaurant);
+  }
+
   function create(restaurant: RestaurantRecord): RestaurantRecord {
     const restaurants = findAll();
     restaurants.push(restaurant);
@@ -73,6 +87,7 @@ function createFileRestaurantRepository(dataDir: string): RestaurantRepository {
 
   return {
     findByEmail,
+    findPublic,
     create,
     updateAvailability,
   };

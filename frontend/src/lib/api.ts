@@ -1,6 +1,7 @@
 import axios, { AxiosError } from "axios";
 
 export type ReservationPayload = {
+  city?: string;
   restaurantId?: string;
   date: string;
   time: string;
@@ -11,11 +12,34 @@ export type ReservationPayload = {
 
 export type Reservation = {
   id: string;
+  restaurantId: string;
+  userId?: string | null;
+  tableId?: string | null;
   date: string;
   time: string;
   guests: number;
   name: string;
   contact: string;
+  createdAt: string;
+};
+
+export type RestaurantTable = {
+  id: string;
+  restaurantId: string;
+  name: string;
+  capacity: number;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export type EventSpace = {
+  id: string;
+  restaurantId: string;
+  name: string;
+  occasion: string;
+  capacity: number;
+  price?: number | null;
+  isActive: boolean;
   createdAt: string;
 };
 
@@ -30,6 +54,7 @@ export type RestaurantAuthPayload = {
   password: string;
   phone?: string;
   address?: string;
+  city?: string;
   openingTime?: string;
   closingTime?: string;
 };
@@ -40,6 +65,9 @@ export type Restaurant = {
   email: string;
   phone?: string | null;
   address?: string | null;
+  city: string;
+  openingTime: string;
+  closingTime: string;
   createdAt: string;
 };
 
@@ -91,12 +119,14 @@ apiClient.interceptors.request.use((config) => {
 });
 
 export async function checkAvailability({
+  restaurantId,
   date,
   time,
-}: Pick<ReservationPayload, "date" | "time">): Promise<AvailabilityResponse> {
+}: Pick<ReservationPayload, "restaurantId" | "date" | "time">): Promise<AvailabilityResponse> {
   const response = await apiClient.post<AvailabilityResponse>(
     "/api/check-availability",
     {
+      restaurantId,
       date,
       time,
     }
@@ -112,6 +142,13 @@ export async function bookTable(
     "/api/book-table",
     reservation
   );
+  return response.data;
+}
+
+export async function getRestaurants(city?: string): Promise<Restaurant[]> {
+  const response = await apiClient.get<Restaurant[]>("/api/restaurants", {
+    params: city ? { city } : undefined,
+  });
   return response.data;
 }
 
@@ -151,6 +188,56 @@ export async function loginUser({
     email,
     password,
   });
+  return response.data;
+}
+
+export async function getRestaurantReservations(): Promise<Reservation[]> {
+  const response = await apiClient.get<Reservation[]>("/api/restaurant/reservations");
+  return response.data;
+}
+
+export async function getRestaurantTables(): Promise<RestaurantTable[]> {
+  const response = await apiClient.get<RestaurantTable[]>("/api/restaurant/tables");
+  return response.data;
+}
+
+export async function createRestaurantTable(payload: {
+  name: string;
+  capacity: string;
+}): Promise<RestaurantTable> {
+  const response = await apiClient.post<RestaurantTable>(
+    "/api/restaurant/tables",
+    payload
+  );
+  return response.data;
+}
+
+export async function getEventSpaces(): Promise<EventSpace[]> {
+  const response = await apiClient.get<EventSpace[]>("/api/restaurant/event-spaces");
+  return response.data;
+}
+
+export async function createEventSpace(payload: {
+  name: string;
+  occasion: string;
+  capacity: string;
+  price: string;
+}): Promise<EventSpace> {
+  const response = await apiClient.post<EventSpace>(
+    "/api/restaurant/event-spaces",
+    payload
+  );
+  return response.data;
+}
+
+export async function updateRestaurantAvailability(payload: {
+  openingTime: string;
+  closingTime: string;
+}): Promise<Restaurant> {
+  const response = await apiClient.patch<Restaurant>(
+    "/api/restaurant/availability",
+    payload
+  );
   return response.data;
 }
 

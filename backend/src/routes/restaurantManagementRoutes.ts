@@ -16,6 +16,8 @@ function createRestaurantManagementRoutes(
   router.get("/tables", restaurantManagementController.listTables);
   router.post("/tables", restaurantManagementController.createTable);
   router.patch("/tables/:tableId", restaurantManagementController.updateTable);
+  router.get("/event-spaces", restaurantManagementController.listEventSpaces);
+  router.post("/event-spaces", restaurantManagementController.createEventSpace);
   router.patch("/availability", restaurantManagementController.updateAvailability);
 
   return router;

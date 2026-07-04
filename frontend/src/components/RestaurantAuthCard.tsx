@@ -11,6 +11,7 @@ import {
   type AuthResponse,
   type RestaurantAuthPayload,
 } from "@/lib/api";
+import { indiaCities } from "@/lib/indiaCities";
 
 const initialFormData: RestaurantAuthPayload = {
   name: "",
@@ -18,6 +19,7 @@ const initialFormData: RestaurantAuthPayload = {
   password: "",
   phone: "",
   address: "",
+  city: "Mumbai",
   openingTime: "10:00",
   closingTime: "22:00",
 };
@@ -43,7 +45,7 @@ export default function RestaurantAuthCard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     setFormData({ ...formData, [event.target.name]: event.target.value });
   };
@@ -242,6 +244,20 @@ export default function RestaurantAuthCard() {
                   className="auth-input"
                 />
               </div>
+            )}
+            {mode === "register" && accountType === "restaurant" && (
+              <select
+                name="city"
+                value={formData.city}
+                onChange={handleChange}
+                className="auth-input"
+              >
+                {indiaCities.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
             )}
             {mode === "register" && accountType === "restaurant" && (
               <div className="grid gap-3 sm:grid-cols-2">

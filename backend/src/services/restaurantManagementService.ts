@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import AppError from "../errors/AppError";
+import type { EventSpace, EventSpaceRepository, EventSpaceRequest } from "../types/eventSpace";
 import type { RestaurantRepository } from "../types/restaurant";
 import type { ReservationRepository } from "../types/reservation";
 import type { RestaurantTable, TableRepository, TableRequest } from "../types/table";
@@ -11,7 +12,8 @@ function isValidTime(value: string): boolean {
 function createRestaurantManagementService(
   restaurantRepository: RestaurantRepository,
   reservationRepository: ReservationRepository,
-  tableRepository: TableRepository
+  tableRepository: TableRepository,
+  eventSpaceRepository: EventSpaceRepository
 ) {
   async function listReservations(restaurantId: string) {
     return reservationRepository.findByRestaurantId(restaurantId);
@@ -19,6 +21,10 @@ function createRestaurantManagementService(
 
   async function listTables(restaurantId: string) {
     return tableRepository.findByRestaurantId(restaurantId);
+  }
+
+  async function listEventSpaces(restaurantId: string) {
+    return eventSpaceRepository.findByRestaurantId(restaurantId);
   }
 
   async function createTable(
@@ -102,12 +108,46 @@ function createRestaurantManagementService(
     return safeRestaurant;
   }
 
+  async function createEventSpace(
+    restaurantId: string,
+    payload: EventSpaceRequest
+  ): Promise<EventSpace> {
+    const name = payload.name?.trim();
+    const occasion = payload.occasion?.trim() || "Birthday";
+    const capacity = Number(payload.capacity);
+    const price =
+      payload.price === undefined || payload.price === ""
+        ? null
+        : Number(payload.price);
+
+    if (!name || !Number.isInteger(capacity) || capacity < 1) {
+      throw new AppError("Space name and valid capacity are required.", 400);
+    }
+
+    if (price !== null && (!Number.isInteger(price) || price < 0)) {
+      throw new AppError("Price must be a whole number greater than or equal to 0.", 400);
+    }
+
+    return eventSpaceRepository.create({
+      id: crypto.randomUUID(),
+      restaurantId,
+      name,
+      occasion,
+      capacity,
+      price,
+      isActive: payload.isActive ?? true,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
   return {
     listReservations,
     listTables,
+    listEventSpaces,
     createTable,
     updateTable,
     updateAvailability,
+    createEventSpace,
   };
 }
 

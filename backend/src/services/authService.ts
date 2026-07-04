@@ -101,11 +101,12 @@ function createAuthService(
     const password = payload.password || "";
     const phone = payload.phone?.trim() || null;
     const address = payload.address?.trim() || null;
+    const city = payload.city?.trim();
     const openingTime = payload.openingTime?.trim() || "10:00";
     const closingTime = payload.closingTime?.trim() || "22:00";
 
-    if (!name || !email || !password) {
-      throw new AppError("Restaurant name, email, and password are required.", 400);
+    if (!name || !email || !password || !city) {
+      throw new AppError("Restaurant name, city, email, and password are required.", 400);
     }
 
     assertEmail(email);
@@ -125,6 +126,7 @@ function createAuthService(
       email,
       phone,
       address,
+      city,
       openingTime,
       closingTime,
       passwordHash: await hashPassword(password),

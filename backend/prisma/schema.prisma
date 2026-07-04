@@ -37,15 +37,34 @@ model Restaurant {
   email        String        @unique
   phone        String?
   address      String?
+  city         String
   openingTime  String        @default("10:00")
   closingTime  String        @default("22:00")
   passwordHash String
   createdAt    DateTime      @default(now())
   reservations  Reservation[]
   tables       Table[]
+  spaces       EventSpace[]
 
   @@index([email])
+  @@index([city])
   @@map("restaurant_booking_restaurants")
+  @@schema("restaurant_booking")
+}
+
+model EventSpace {
+  id           String     @id @default(uuid())
+  restaurantId String
+  name         String
+  occasion     String
+  capacity     Int
+  price        Int?
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+  @@map("restaurant_booking_event_spaces")
   @@schema("restaurant_booking")
 }
 

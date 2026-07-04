@@ -1,70 +1,113 @@
 # Restaurant Table Booking
 
-A full-stack restaurant reservation app built with Next.js, React, Express, and TypeScript. Guests can check table availability and create reservations through a polished booking UI, while the backend keeps reservation logic separated into controllers, services, repositories, routes, and config.
+A production-style full-stack restaurant reservation platform built with Next.js, Express, TypeScript, Prisma, and Supabase PostgreSQL. Users can discover restaurants by Indian city, check availability, and create bookings. Restaurants can register, manage tables, configure opening hours, add event or celebration spaces, and view their own reservations.
+
+## Features
+
+- Role-based authentication for `user` and `restaurant` accounts.
+- City-based restaurant discovery before booking.
+- Availability checks scoped to the selected restaurant.
+- User and restaurant booking flow.
+- Restaurant dashboard for reservations, tables, event spaces, and business hours.
+- Supabase PostgreSQL integration through Prisma.
+- Dedicated PostgreSQL schema and prefixed tables to safely share one Supabase project with other apps.
+- Swagger/OpenAPI documentation for backend APIs.
+- Clean backend architecture with controllers, services, repositories, routes, middleware, config, and typed models.
 
 ## Tech Stack
 
 - Frontend: Next.js 16, React 19, TypeScript, Tailwind CSS, Axios
 - Backend: Node.js, Express, TypeScript
-- Storage: PostgreSQL with Prisma, with JSON file fallback for local tests
-- Tooling: ESLint, TypeScript compiler, Node test runner
+- Database: Supabase PostgreSQL, Prisma ORM
+- Auth: Custom JWT-style signed tokens with role-based middleware
+- Tooling: ESLint, TypeScript compiler, Node test runner, Vercel deployment
 
 ## Project Structure
 
 ```text
 restaurant_table_booking/
   backend/
-    api/                 Vercel API entry
-    data/                Local reservation storage
-    prisma/              Prisma schema and migrations
+    api/                 Vercel serverless entry
+    prisma/              Prisma schema
     src/
       config/            Environment config
-      controllers/       Request handlers
-      errors/            App error types
-      middleware/        Express middleware
-      repositories/      Data access layer
-      routes/            API routes
+      controllers/       HTTP request handlers
+      errors/            App error classes
+      lib/               Prisma and shared infrastructure
+      middleware/        Error, auth, and request middleware
+      repositories/      Database access layer
+      routes/            API route modules
       services/          Business logic
-      types/             Shared backend types
+      types/             Backend TypeScript types
   frontend/
     src/
-      app/               Next App Router pages and route handlers
+      app/               Next.js App Router pages
       components/        UI components
-      lib/               API client helpers
+      lib/               API client and app constants
       types/             Frontend declarations
 ```
 
 ## Environment Setup
 
-Create local env files from the examples:
+Create local environment files from the examples:
 
 ```bash
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env.local
 ```
 
-Backend defaults:
+Backend `.env`:
 
 ```env
 NODE_ENV=development
 PORT=3001
 CORS_ORIGIN=http://localhost:3000
-DATA_DIR=./data
 JWT_SECRET=change-this-to-a-long-random-secret
 POSTGRES_PRISMA_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-region.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1&sslmode=require
 POSTGRES_URL_NON_POOLING=postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres?sslmode=require
 SUPABASE_CA_CERT=
 ```
 
-Frontend defaults:
+Frontend `.env.local`:
 
 ```env
 NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
 ```
 
-## Install Dependencies
+## Supabase And Prisma
 
-Install dependencies separately for each app:
+Use one Supabase project and keep this app isolated with the dedicated `restaurant_booking` schema. This avoids table conflicts when the same Supabase project is shared with other portfolio projects.
+
+Current app tables:
+
+```text
+restaurant_booking.restaurant_booking_restaurants
+restaurant_booking.restaurant_booking_users
+restaurant_booking.restaurant_booking_reservations
+restaurant_booking.restaurant_booking_tables
+restaurant_booking.restaurant_booking_event_spaces
+```
+
+Use two database URLs:
+
+```text
+POSTGRES_PRISMA_URL      -> Supabase pooler URL for app runtime and Vercel
+POSTGRES_URL_NON_POOLING -> Supabase direct URL for Prisma schema commands
+```
+
+After schema changes, run:
+
+```bash
+cd backend
+npm run db:generate
+npm run db:push
+```
+
+If Prisma cannot add a new required column because existing rows already exist, do not use `--force-reset` on a real database. Add a safe default with SQL first, then run `npm run db:push` again.
+
+## Install And Run
+
+Install dependencies:
 
 ```bash
 cd backend
@@ -74,102 +117,42 @@ cd ../frontend
 npm install
 ```
 
-## Run Locally
-
-If you have a PostgreSQL database URL, generate Prisma client and run migrations:
-
-```bash
-cd backend
-npm run db:generate
-npm run db:migrate
-```
-
-If `DATABASE_URL` is not set, the backend falls back to local JSON file storage.
-
-## Supabase Setup
-
-Create one Supabase project and use its PostgreSQL database for this app:
-
-```text
-Supabase Dashboard -> Project Settings -> Database -> Connection string
-```
-
-Use the transaction pooler connection as `POSTGRES_PRISMA_URL`. This is best for Vercel/serverless runtime.
-
-Use the direct connection as `POSTGRES_URL_NON_POOLING`. Prisma automatically uses this URL for schema commands such as `db:push`, `db:migrate`, `db:deploy`, and `db:studio`.
-
-This gives you two clean connection modes:
-
-```text
-POSTGRES_PRISMA_URL      -> Supabase transaction pooler for app runtime/Vercel
-POSTGRES_URL_NON_POOLING -> Supabase direct connection for Prisma schema changes
-```
-
-For stricter production SSL verification, add the Supabase CA certificate as `SUPABASE_CA_CERT`. If this value is present, the backend verifies the database certificate chain. If it is not present, the backend still uses encrypted SSL but skips certificate-chain verification for compatibility with serverless deployments.
-
-This project uses its own Supabase/PostgreSQL schema plus project-prefixed table names, so it can share one Supabase project with other apps safely:
-
-```text
-restaurant_booking.restaurant_booking_reservations
-restaurant_booking.restaurant_booking_restaurants
-```
-
-After updating `backend/.env`, sync the Prisma schema to Supabase:
-
-```bash
-cd backend
-npm run db:generate
-npm run db:push
-```
-
-For Vercel backend deployment, add these environment variables:
-
-```text
-NODE_ENV=production
-CORS_ORIGIN=https://restaurant-table-booking-front.vercel.app
-JWT_SECRET=your-secure-production-secret
-POSTGRES_PRISMA_URL=your-supabase-transaction-pooler-url
-POSTGRES_URL_NON_POOLING=your-supabase-direct-url
-SUPABASE_CA_CERT=your-supabase-ca-certificate
-```
-
 Start the backend:
 
 ```bash
 cd backend
-npm run build
-npm start
+npm run dev
 ```
 
-Start the frontend in another terminal:
+Start the frontend:
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-Open the frontend URL shown by Next.js, usually:
+Local URLs:
 
 ```text
-http://localhost:3000
+Frontend: http://localhost:3000
+Backend:  http://localhost:3001
+Docs:     http://localhost:3001/api/docs
 ```
-
-If port `3000` is busy, Next.js may choose another port. Make sure that port is included in `backend/.env` under `CORS_ORIGIN`.
 
 ## Available Scripts
 
 Backend:
 
 ```bash
-npm run build   # Compile TypeScript to dist/
-npm run dev     # Start TypeScript backend with auto-restart
+npm run dev         # Start backend with auto-restart
+npm run build       # Compile TypeScript
+npm start           # Start compiled backend
 npm run db:generate # Generate Prisma client
-npm run db:migrate  # Run Prisma migrations against PostgreSQL
 npm run db:push     # Push Prisma schema to Supabase/PostgreSQL
-npm run db:deploy   # Apply committed Prisma migrations in production
+npm run db:migrate  # Create and run Prisma migrations
+npm run db:deploy   # Apply migrations in production
 npm run db:studio   # Open Prisma Studio
-npm test        # Build and run API tests
-npm start       # Start compiled backend
+npm test            # Build and run backend tests
 ```
 
 Frontend:
@@ -181,76 +164,86 @@ npm run start   # Start production frontend
 npm run lint    # Run ESLint
 ```
 
-## API Endpoints
+## API Overview
+
+Health and docs:
 
 ```text
 GET  /api/health
+GET  /api/health/db
 GET  /api/docs
 GET  /api/docs/openapi.json
-POST /api/auth/register
-POST /api/auth/login
+```
+
+Authentication:
+
+```text
+POST /api/auth/user/register
+POST /api/auth/user/login
+POST /api/auth/restaurant/register
+POST /api/auth/restaurant/login
+```
+
+Public booking flow:
+
+```text
+GET  /api/restaurants?city=Mumbai
 POST /api/check-availability
 POST /api/book-table
+GET  /api/reservations
 ```
 
-Interactive Swagger API documentation is available at:
+Restaurant management:
 
 ```text
-http://localhost:3001/api/docs
+GET   /api/restaurant/reservations
+GET   /api/restaurant/tables
+POST  /api/restaurant/tables
+PATCH /api/restaurant/tables/:tableId
+GET   /api/restaurant/event-spaces
+POST  /api/restaurant/event-spaces
+PATCH /api/restaurant/availability
 ```
 
-Reservation endpoints require restaurant login. Send the token from register/login as a bearer token:
+Protected routes require a bearer token:
 
 ```text
-Authorization: Bearer <restaurant-token>
+Authorization: Bearer <token>
 ```
 
-Reservations are scoped by restaurant, so each restaurant can only check conflicts and create bookings against its own reservation records.
+Restaurants can only access their own reservations, tables, event spaces, and availability settings. Users can create bookings for selected restaurants and view bookings linked to their own account.
 
-Availability request:
+## Deployment
 
-```json
-{
-  "date": "2026-07-15",
-  "time": "19:00"
-}
+Backend production variables for Vercel:
+
+```env
+NODE_ENV=production
+CORS_ORIGIN=https://restaurant-table-booking-front.vercel.app
+JWT_SECRET=your-secure-production-secret
+POSTGRES_PRISMA_URL=your-supabase-pooler-url
+POSTGRES_URL_NON_POOLING=your-supabase-direct-url
+SUPABASE_CA_CERT=your-supabase-ca-certificate
 ```
 
-Booking request:
+Frontend production variable:
 
-```json
-{
-  "date": "2026-07-15",
-  "time": "19:00",
-  "guests": 4,
-  "name": "Asha",
-  "contact": "9999999999"
-}
+```env
+NEXT_PUBLIC_API_BASE_URL=https://restaurant-table-booking-app-back.vercel.app
 ```
 
-Restaurant register request:
+Before deploying backend schema changes:
 
-```json
-{
-  "name": "The Green Fork",
-  "email": "owner@greenfork.com",
-  "password": "securepass123",
-  "phone": "+91 98765 43210",
-  "address": "12 Market Street"
-}
-```
-
-Restaurant login request:
-
-```json
-{
-  "email": "owner@greenfork.com",
-  "password": "securepass123"
-}
+```bash
+cd backend
+npm run db:generate
+npm run db:push
 ```
 
 ## Production Notes
 
-The backend uses PostgreSQL through Prisma when `POSTGRES_PRISMA_URL` or `DATABASE_URL` is configured. The Prisma schema enforces unique reservations by `date` and `time`, which helps prevent duplicate bookings at the database level.
-
-Do not commit real `.env` files. Commit only `.env.example` files.
+- Keep real `.env` files out of Git and commit only `.env.example` files.
+- Use a long random `JWT_SECRET` in production.
+- Keep `POSTGRES_PRISMA_URL` pointed at the Supabase pooler for serverless runtime.
+- Keep `POSTGRES_URL_NON_POOLING` pointed at the direct Supabase host for Prisma schema commands.
+- Add `SUPABASE_CA_CERT` when you want strict database certificate verification in production.

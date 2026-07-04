@@ -10,6 +10,7 @@ type PrismaRestaurant = {
   email: string;
   phone: string | null;
   address: string | null;
+  city: string;
   openingTime: string;
   closingTime: string;
   passwordHash: string;
@@ -34,6 +35,25 @@ function createPrismaRestaurantRepository(): RestaurantRepository {
     return restaurant ? mapRestaurant(restaurant) : null;
   }
 
+  async function findPublic(city?: string) {
+    const restaurants = await prisma.restaurant.findMany({
+      where: city
+        ? {
+            city: {
+              equals: city,
+              mode: "insensitive",
+            },
+          }
+        : undefined,
+      orderBy: { name: "asc" },
+    });
+
+    return restaurants.map((restaurant) => {
+      const { passwordHash, ...publicRestaurant } = mapRestaurant(restaurant);
+      return publicRestaurant;
+    });
+  }
+
   async function create(
     restaurant: RestaurantRecord
   ): Promise<RestaurantRecord> {
@@ -44,6 +64,7 @@ function createPrismaRestaurantRepository(): RestaurantRepository {
         email: restaurant.email,
         phone: restaurant.phone,
         address: restaurant.address,
+        city: restaurant.city,
         openingTime: restaurant.openingTime,
         closingTime: restaurant.closingTime,
         passwordHash: restaurant.passwordHash,
@@ -68,6 +89,7 @@ function createPrismaRestaurantRepository(): RestaurantRepository {
 
   return {
     findByEmail,
+    findPublic,
     create,
     updateAvailability,
   };

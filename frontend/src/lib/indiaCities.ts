@@ -1,0 +1,17 @@
+export const indiaCities = [
+  "Ahmedabad",
+  "Bengaluru",
+  "Chandigarh",
+  "Chennai",
+  "Delhi",
+  "Gurugram",
+  "Hyderabad",
+  "Jaipur",
+  "Kochi",
+  "Kolkata",
+  "Lucknow",
+  "Mumbai",
+  "Noida",
+  "Pune",
+  "Surat",
+] as const;
