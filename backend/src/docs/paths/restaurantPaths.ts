@@ -14,6 +14,36 @@ export const restaurantPaths = {
           },
           description: "Filter restaurants by city.",
         },
+        {
+          name: "bookingType",
+          in: "query",
+          required: false,
+          schema: {
+            type: "string",
+            enum: ["TABLE", "EVENT_SPACE"],
+            example: "EVENT_SPACE",
+          },
+          description:
+            "Use EVENT_SPACE to return only restaurants with active event spaces.",
+        },
+        {
+          name: "eventSpaceCategory",
+          in: "query",
+          required: false,
+          schema: {
+            type: "string",
+            enum: [
+              "MARRIAGE",
+              "BIRTHDAY_PARTY",
+              "RECEPTION",
+              "GENERAL_PARTY",
+              "GENERAL_EVENT",
+            ],
+            example: "MARRIAGE",
+          },
+          description:
+            "Required when bookingType is EVENT_SPACE. Event-space discovery must use a specific category.",
+        },
       ],
       responses: {
         "200": {

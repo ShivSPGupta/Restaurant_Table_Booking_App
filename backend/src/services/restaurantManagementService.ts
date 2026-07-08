@@ -1,12 +1,24 @@
 import crypto from "crypto";
 import AppError from "../errors/AppError";
-import type { EventSpace, EventSpaceRepository, EventSpaceRequest } from "../types/eventSpace";
+import type {
+  EventSpace,
+  EventSpaceCategory,
+  EventSpaceRepository,
+  EventSpaceRequest,
+} from "../types/eventSpace";
 import type { RestaurantRepository } from "../types/restaurant";
 import type { ReservationRepository } from "../types/reservation";
 import type { RestaurantTable, TableRepository, TableRequest } from "../types/table";
 import type { TableCategory } from "../types/table";
 
 const tableCategories = ["PUBLIC", "COUPLE", "FAMILY", "SPECIAL"] as const;
+const eventSpaceCategories = [
+  "MARRIAGE",
+  "BIRTHDAY_PARTY",
+  "RECEPTION",
+  "GENERAL_PARTY",
+  "GENERAL_EVENT",
+] as const;
 
 function isValidTime(value: string): boolean {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
@@ -21,8 +33,22 @@ function normalizeTableCategory(category?: TableCategory): TableCategory {
     return "PUBLIC";
   }
 
-  if (!tableCategories.includes(category)) {
+  if (!tableCategories.some((tableCategory) => tableCategory === category)) {
     throw new AppError("Select a valid table category.", 400);
+  }
+
+  return category;
+}
+
+function normalizeEventSpaceCategory(
+  category?: EventSpaceCategory
+): EventSpaceCategory {
+  if (!category) {
+    return "GENERAL_EVENT";
+  }
+
+  if (!eventSpaceCategories.includes(category)) {
+    throw new AppError("Select a valid event space category.", 400);
   }
 
   return category;
@@ -297,7 +323,8 @@ function createRestaurantManagementService(
     payload: EventSpaceRequest
   ): Promise<EventSpace> {
     const name = payload.name?.trim();
-    const occasion = payload.occasion?.trim() || "Birthday";
+    const category = normalizeEventSpaceCategory(payload.category);
+    const occasion = payload.occasion?.trim() || category;
     const capacity = Number(payload.capacity);
     const price =
       payload.price === undefined || payload.price === ""
@@ -317,6 +344,7 @@ function createRestaurantManagementService(
       restaurantId,
       name,
       occasion,
+      category,
       capacity,
       price,
       isActive: payload.isActive ?? true,

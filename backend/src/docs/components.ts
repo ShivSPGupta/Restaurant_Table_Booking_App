@@ -182,11 +182,25 @@ export const openApiComponents = {
           type: "string",
           example: "10:00",
         },
-        closingTime: {
-          type: "string",
-          example: "22:00",
-        },
-        createdAt: {
+          closingTime: {
+            type: "string",
+            example: "22:00",
+          },
+          eventSpaceCategories: {
+            type: "array",
+            items: {
+              type: "string",
+              enum: [
+                "MARRIAGE",
+                "BIRTHDAY_PARTY",
+                "RECEPTION",
+                "GENERAL_PARTY",
+                "GENERAL_EVENT",
+              ],
+            },
+            example: ["MARRIAGE", "RECEPTION"],
+          },
+          createdAt: {
           type: "string",
           format: "date-time",
           example: "2026-07-15T12:00:00.000Z",
@@ -265,6 +279,11 @@ export const openApiComponents = {
           description: "Required for guest accounts. Ignored for restaurant accounts.",
           example: "clx7bp2dn0000q8q2p5w2x9m7",
         },
+        bookingType: {
+          type: "string",
+          enum: ["TABLE", "EVENT_SPACE"],
+          example: "EVENT_SPACE",
+        },
         date: {
           type: "string",
           format: "date",
@@ -274,6 +293,11 @@ export const openApiComponents = {
           type: "string",
           example: "19:00",
         },
+        endTime: {
+          type: "string",
+          description: "Required for EVENT_SPACE bookings.",
+          example: "23:00",
+        },
         guests: {
           type: "integer",
           minimum: 1,
@@ -281,14 +305,26 @@ export const openApiComponents = {
         },
         tableCategory: {
           type: "string",
-          enum: ["ANY", "PUBLIC", "COUPLE", "FAMILY", "SPECIAL"],
-          example: "FAMILY",
+          description: "Required for TABLE bookings. Public/Open only checks public tables; Any is not allowed.",
+          enum: ["PUBLIC", "COUPLE", "FAMILY", "SPECIAL"],
+          example: "PUBLIC",
+        },
+        eventSpaceCategory: {
+          type: "string",
+          enum: [
+            "MARRIAGE",
+            "BIRTHDAY_PARTY",
+            "RECEPTION",
+            "GENERAL_PARTY",
+            "GENERAL_EVENT",
+          ],
+          example: "RECEPTION",
         },
       },
     },
     AvailabilityResponse: {
       type: "object",
-      required: ["available", "slots", "tables"],
+      required: ["available", "slots", "tables", "eventSpaces"],
       properties: {
         available: {
           type: "boolean",
@@ -327,25 +363,83 @@ export const openApiComponents = {
             },
           },
         },
+        eventSpaces: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["id", "name", "category", "capacity"],
+            properties: {
+              id: {
+                type: "string",
+                example: "clx7bp2dn0000q8q2p5w2x9e1",
+              },
+              name: {
+                type: "string",
+                example: "Reception Hall",
+              },
+              category: {
+                type: "string",
+                enum: [
+                  "MARRIAGE",
+                  "BIRTHDAY_PARTY",
+                  "RECEPTION",
+                  "GENERAL_PARTY",
+                  "GENERAL_EVENT",
+                ],
+                example: "RECEPTION",
+              },
+              capacity: {
+                type: "integer",
+                example: 100,
+              },
+              price: {
+                type: "integer",
+                nullable: true,
+                example: 2500,
+              },
+            },
+          },
+        },
       },
     },
     BookingRequest: {
       type: "object",
-      required: ["tableId", "date", "time", "guests", "name", "contact"],
+      required: ["date", "time", "guests", "name", "contact"],
       properties: {
         restaurantId: {
           type: "string",
           description: "Required for guest accounts. Ignored for restaurant accounts.",
           example: "clx7bp2dn0000q8q2p5w2x9m7",
         },
+        bookingType: {
+          type: "string",
+          enum: ["TABLE", "EVENT_SPACE"],
+          example: "EVENT_SPACE",
+        },
         tableId: {
           type: "string",
           example: "clx7bp2dn0000q8q2p5w2x9t1",
         },
+        eventSpaceId: {
+          type: "string",
+          example: "clx7bp2dn0000q8q2p5w2x9e1",
+        },
         tableCategory: {
           type: "string",
-          enum: ["ANY", "PUBLIC", "COUPLE", "FAMILY", "SPECIAL"],
-          example: "FAMILY",
+          description: "Required for TABLE bookings. Must match the selected table category.",
+          enum: ["PUBLIC", "COUPLE", "FAMILY", "SPECIAL"],
+          example: "PUBLIC",
+        },
+        eventSpaceCategory: {
+          type: "string",
+          enum: [
+            "MARRIAGE",
+            "BIRTHDAY_PARTY",
+            "RECEPTION",
+            "GENERAL_PARTY",
+            "GENERAL_EVENT",
+          ],
+          example: "RECEPTION",
         },
         date: {
           type: "string",
@@ -355,6 +449,11 @@ export const openApiComponents = {
         time: {
           type: "string",
           example: "19:00",
+        },
+        endTime: {
+          type: "string",
+          description: "Required for EVENT_SPACE bookings.",
+          example: "23:00",
         },
         guests: {
           type: "integer",
@@ -433,6 +532,16 @@ export const openApiComponents = {
           nullable: true,
           example: "clx7bp2dn0000q8q2p5w2x9t1",
         },
+        eventSpaceId: {
+          type: "string",
+          nullable: true,
+          example: "clx7bp2dn0000q8q2p5w2x9e1",
+        },
+        bookingType: {
+          type: "string",
+          enum: ["TABLE", "EVENT_SPACE"],
+          example: "EVENT_SPACE",
+        },
         date: {
           type: "string",
           format: "date",
@@ -441,6 +550,11 @@ export const openApiComponents = {
         time: {
           type: "string",
           example: "19:00",
+        },
+        endTime: {
+          type: "string",
+          nullable: true,
+          example: "23:00",
         },
         guests: {
           type: "integer",
@@ -472,7 +586,7 @@ export const openApiComponents = {
         category: {
           type: "string",
           enum: ["PUBLIC", "COUPLE", "FAMILY", "SPECIAL"],
-          example: "FAMILY",
+          example: "PUBLIC",
         },
         capacity: {
           type: "integer",
@@ -530,6 +644,17 @@ export const openApiComponents = {
           type: "string",
           example: "Birthday",
         },
+        category: {
+          type: "string",
+          enum: [
+            "MARRIAGE",
+            "BIRTHDAY_PARTY",
+            "RECEPTION",
+            "GENERAL_PARTY",
+            "GENERAL_EVENT",
+          ],
+          example: "BIRTHDAY_PARTY",
+        },
         capacity: {
           type: "integer",
           minimum: 1,
@@ -559,6 +684,7 @@ export const openApiComponents = {
             "restaurantId",
             "name",
             "occasion",
+            "category",
             "capacity",
             "isActive",
             "createdAt",

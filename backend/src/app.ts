@@ -31,7 +31,8 @@ function createApp() {
   const authService = createAuthService(restaurantRepository, userRepository);
   const reservationService = createReservationService(
     reservationRepository,
-    tableRepository
+    tableRepository,
+    eventSpaceRepository
   );
   const restaurantManagementService = createRestaurantManagementService(
     restaurantRepository,
@@ -41,7 +42,7 @@ function createApp() {
   );
   const authController = createAuthController(authService);
   const publicRestaurantController =
-    createPublicRestaurantController(restaurantRepository);
+    createPublicRestaurantController(restaurantRepository, eventSpaceRepository);
   const reservationController = createReservationController(reservationService);
   const restaurantManagementController =
     createRestaurantManagementController(restaurantManagementService);

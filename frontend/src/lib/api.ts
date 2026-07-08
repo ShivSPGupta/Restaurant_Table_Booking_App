@@ -4,23 +4,37 @@ export type ReservationPayload = {
   city?: string;
   restaurantId?: string;
   tableId?: string;
-  tableCategory?: TableCategory | "ANY";
+  eventSpaceId?: string;
+  bookingType?: "TABLE" | "EVENT_SPACE";
+  tableCategory?: BookingTableCategory;
+  eventSpaceCategory?: EventSpaceCategory;
   date: string;
   time: string;
+  endTime?: string;
   guests: string;
   name: string;
   contact: string;
 };
 
 export type TableCategory = "PUBLIC" | "COUPLE" | "FAMILY" | "SPECIAL";
+export type BookingTableCategory = TableCategory;
+export type EventSpaceCategory =
+  | "MARRIAGE"
+  | "BIRTHDAY_PARTY"
+  | "RECEPTION"
+  | "GENERAL_PARTY"
+  | "GENERAL_EVENT";
 
 export type Reservation = {
   id: string;
   restaurantId: string;
   userId?: string | null;
   tableId?: string | null;
+  eventSpaceId?: string | null;
+  bookingType: "TABLE" | "EVENT_SPACE";
   date: string;
   time: string;
+  endTime?: string | null;
   guests: number;
   name: string;
   contact: string;
@@ -42,6 +56,7 @@ export type EventSpace = {
   restaurantId: string;
   name: string;
   occasion: string;
+  category: EventSpaceCategory;
   capacity: number;
   price?: number | null;
   isActive: boolean;
@@ -52,6 +67,10 @@ export type AvailabilityResponse = {
   available: boolean;
   slots: string[];
   tables: Pick<RestaurantTable, "id" | "name" | "category" | "capacity">[];
+  eventSpaces: Pick<
+    EventSpace,
+    "id" | "name" | "category" | "capacity" | "price"
+  >[];
 };
 
 export type RestaurantAuthPayload = {
@@ -74,6 +93,7 @@ export type Restaurant = {
   city: string;
   openingTime: string;
   closingTime: string;
+  eventSpaceCategories?: EventSpaceCategory[];
   createdAt: string;
 };
 
@@ -128,11 +148,21 @@ export async function checkAvailability({
   restaurantId,
   date,
   time,
+  endTime,
   guests,
   tableCategory,
+  bookingType,
+  eventSpaceCategory,
 }: Pick<
   ReservationPayload,
-  "restaurantId" | "date" | "time" | "guests" | "tableCategory"
+  | "restaurantId"
+  | "date"
+  | "time"
+  | "endTime"
+  | "guests"
+  | "tableCategory"
+  | "bookingType"
+  | "eventSpaceCategory"
 >): Promise<AvailabilityResponse> {
   const response = await apiClient.post<AvailabilityResponse>(
     "/api/check-availability",
@@ -140,8 +170,11 @@ export async function checkAvailability({
       restaurantId,
       date,
       time,
+      endTime,
       guests,
       tableCategory,
+      bookingType,
+      eventSpaceCategory,
     }
   );
 
@@ -158,9 +191,21 @@ export async function bookTable(
   return response.data;
 }
 
-export async function getRestaurants(city?: string): Promise<Restaurant[]> {
+export async function getRestaurants(
+  city?: string,
+  filters?: {
+    bookingType?: ReservationPayload["bookingType"];
+    eventSpaceCategory?: ReservationPayload["eventSpaceCategory"];
+  }
+): Promise<Restaurant[]> {
   const response = await apiClient.get<Restaurant[]>("/api/restaurants", {
-    params: city ? { city } : undefined,
+    params: {
+      ...(city ? { city } : {}),
+      ...(filters?.bookingType ? { bookingType: filters.bookingType } : {}),
+      ...(filters?.eventSpaceCategory
+        ? { eventSpaceCategory: filters.eventSpaceCategory }
+        : {}),
+    },
   });
   return response.data;
 }
@@ -290,6 +335,7 @@ export async function getEventSpaces(): Promise<EventSpace[]> {
 
 export async function createEventSpace(payload: {
   name: string;
+  category: EventSpaceCategory;
   occasion: string;
   capacity: string;
   price: string;

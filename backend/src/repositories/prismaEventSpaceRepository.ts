@@ -6,6 +6,7 @@ type PrismaEventSpace = {
   restaurantId: string;
   name: string;
   occasion: string;
+  category?: string | null;
   capacity: number;
   price: number | null;
   isActive: boolean;
@@ -15,6 +16,7 @@ type PrismaEventSpace = {
 function mapEventSpace(space: PrismaEventSpace): EventSpace {
   return {
     ...space,
+    category: (space.category || "GENERAL_EVENT") as EventSpace["category"],
     createdAt: space.createdAt.toISOString(),
   };
 }
@@ -36,6 +38,7 @@ function createPrismaEventSpaceRepository(): EventSpaceRepository {
         restaurantId: space.restaurantId,
         name: space.name,
         occasion: space.occasion,
+        category: space.category,
         capacity: space.capacity,
         price: space.price,
         isActive: space.isActive,

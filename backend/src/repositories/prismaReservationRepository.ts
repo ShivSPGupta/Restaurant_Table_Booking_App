@@ -1,13 +1,20 @@
 import prisma from "../lib/prisma";
-import type { Reservation, ReservationRepository } from "../types/reservation";
+import type {
+  BookingType,
+  Reservation,
+  ReservationRepository,
+} from "../types/reservation";
 
 type PrismaReservation = {
   id: string;
   restaurantId: string;
   userId: string | null;
   tableId: string | null;
+  eventSpaceId: string | null;
+  bookingType: string;
   date: string;
   time: string;
+  endTime: string | null;
   guests: number;
   name: string;
   contact: string;
@@ -17,6 +24,7 @@ type PrismaReservation = {
 function mapReservation(reservation: PrismaReservation): Reservation {
   return {
     ...reservation,
+    bookingType: (reservation.bookingType || "TABLE") as BookingType,
     createdAt: reservation.createdAt.toISOString(),
   };
 }
@@ -82,6 +90,36 @@ function createPrismaReservationRepository(): ReservationRepository {
     return reservation ? mapReservation(reservation) : null;
   }
 
+  async function findByEventSpaceDateTime(
+    eventSpaceId: string,
+    date: string,
+    time: string
+  ): Promise<Reservation | null> {
+    const reservation = await prisma.reservation.findFirst({
+      where: {
+        eventSpaceId,
+        date,
+        time,
+      },
+    });
+
+    return reservation ? mapReservation(reservation) : null;
+  }
+
+  async function findByEventSpaceDate(
+    eventSpaceId: string,
+    date: string
+  ): Promise<Reservation[]> {
+    const reservations = await prisma.reservation.findMany({
+      where: {
+        eventSpaceId,
+        date,
+      },
+    });
+
+    return reservations.map(mapReservation);
+  }
+
   async function create(reservation: Reservation): Promise<Reservation> {
     const createdReservation = await prisma.reservation.create({
       data: {
@@ -89,8 +127,11 @@ function createPrismaReservationRepository(): ReservationRepository {
         restaurantId: reservation.restaurantId,
         userId: reservation.userId,
         tableId: reservation.tableId,
+        eventSpaceId: reservation.eventSpaceId,
+        bookingType: reservation.bookingType,
         date: reservation.date,
         time: reservation.time,
+        endTime: reservation.endTime,
         guests: reservation.guests,
         name: reservation.name,
         contact: reservation.contact,
@@ -147,6 +188,8 @@ function createPrismaReservationRepository(): ReservationRepository {
     findByUserId,
     findByDateTime,
     findByTableDateTime,
+    findByEventSpaceDateTime,
+    findByEventSpaceDate,
     create,
     update,
     delete: deleteReservation,

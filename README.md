@@ -6,12 +6,15 @@ A production-style full-stack restaurant reservation platform built with Next.js
 
 - Role-based authentication for `user` and `restaurant` accounts.
 - City-based restaurant discovery before booking.
-- Login-required availability checks with category-based table selection.
+- Event-space discovery before booking, so users can find restaurants with marriage halls, birthday party spaces, receptions, general party spaces, or general event spaces.
+- Login-required availability checks with category-based table and event-space selection.
 - User dashboard for personal booking history with modify and cancel actions.
-- Restaurant dashboard for reservations, tables, event spaces, and business hours.
+- Restaurant dashboard for reservations, tables, event spaces, event categories, and business hours.
 - Restaurant booking management with modify and cancel actions.
 - Table-aware booking so multiple tables can be reserved at the same time while the same table cannot be double-booked.
-- Table categories for `Public`, `Couple`, `Family`, and `Special` seating.
+- Strict table categories for `Public/Open`, `Couple`, `Family`, and `Special` seating.
+- Event-space categories for `Marriage`, `Birthday Party`, `Reception`, `General Party`, and `General Event`.
+- Event-space duration booking with start/end time overlap protection.
 - Table management with add, modify, category, activate/deactivate, capacity checks, and duplicate-name protection.
 - Supabase PostgreSQL integration through Prisma.
 - Dedicated PostgreSQL schema and prefixed tables to safely share one Supabase project with other apps.
@@ -92,7 +95,7 @@ restaurant_booking.restaurant_booking_tables
 restaurant_booking.restaurant_booking_event_spaces
 ```
 
-Table names are protected against duplicates per restaurant with a normalized name column and database unique constraint. This prevents duplicate names such as `Table 1`, ` table 1 `, and `TABLE 1` from being stored as separate tables. Existing tables default to the `Public` category, while restaurants can organize new tables as `Couple`, `Family`, or `Special`. Reservations are protected at table/date/time level, so one restaurant can accept multiple bookings in the same time slot across different tables.
+Table names are protected against duplicates per restaurant with a normalized name column and database unique constraint. This prevents duplicate names such as `Table 1`, ` table 1 `, and `TABLE 1` from being stored as separate tables. New tables default to `Public/Open`, and customer table bookings must choose a strict `Public/Open`, `Couple`, `Family`, or `Special` category. Public/Open bookings only search public tables, so they cannot consume couple, family, or special table inventory. Event spaces default to `General Event` and can be organized as `Marriage`, `Birthday Party`, `Reception`, or `General Party`. Table reservations are protected at table/date/time level. Event-space reservations use start and end time, and overlapping bookings for the same event space are blocked.
 
 Use two database URLs:
 
@@ -209,7 +212,7 @@ PATCH /api/reservations/:reservationId
 DELETE /api/reservations/:reservationId
 ```
 
-`GET /api/restaurants` is public. Availability checks, booking, and reservation history require login with either a user or restaurant token. Availability returns active tables that match the party size, optional table category, and selected date/time.
+`GET /api/restaurants` is public and supports event-space discovery with `bookingType=EVENT_SPACE` and a required specific `eventSpaceCategory`. Availability checks, booking, and reservation history require login with either a user or restaurant token. Availability returns active tables or event spaces that match the party size, selected category, and selected date/time.
 
 Restaurant management:
 

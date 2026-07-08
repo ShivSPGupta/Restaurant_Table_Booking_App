@@ -7,6 +7,7 @@ export type Restaurant = {
   city: string;
   openingTime: string;
   closingTime: string;
+  eventSpaceCategories?: string[];
   createdAt: string;
 };
 

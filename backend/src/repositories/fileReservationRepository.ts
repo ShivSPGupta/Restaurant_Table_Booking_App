@@ -2,6 +2,15 @@ import fs from "fs";
 import path from "path";
 import type { Reservation, ReservationRepository } from "../types/reservation";
 
+function withReservationDefaults(reservation: Reservation): Reservation {
+  return {
+    ...reservation,
+    eventSpaceId: reservation.eventSpaceId || null,
+    bookingType: reservation.bookingType || "TABLE",
+    endTime: reservation.endTime || null,
+  };
+}
+
 function createFileReservationRepository(dataDir: string): ReservationRepository {
   const reservationsFile = path.join(dataDir, "reservations.json");
 
@@ -21,7 +30,9 @@ function createFileReservationRepository(dataDir: string): ReservationRepository
     try {
       const fileContents = fs.readFileSync(reservationsFile, "utf8");
       const reservations = JSON.parse(fileContents);
-      return Array.isArray(reservations) ? reservations : [];
+      return Array.isArray(reservations)
+        ? reservations.map(withReservationDefaults)
+        : [];
     } catch (error) {
       return [];
     }
@@ -59,6 +70,29 @@ function createFileReservationRepository(dataDir: string): ReservationRepository
         reservation.tableId === tableId &&
         reservation.date === date &&
         reservation.time === time
+    );
+  }
+
+  function findByEventSpaceDateTime(
+    eventSpaceId: string,
+    date: string,
+    time: string
+  ): Reservation | undefined {
+    return findAll().find(
+      (reservation) =>
+        reservation.eventSpaceId === eventSpaceId &&
+        reservation.date === date &&
+        reservation.time === time
+    );
+  }
+
+  function findByEventSpaceDate(
+    eventSpaceId: string,
+    date: string
+  ): Reservation[] {
+    return findAll().filter(
+      (reservation) =>
+        reservation.eventSpaceId === eventSpaceId && reservation.date === date
     );
   }
 
@@ -128,6 +162,8 @@ function createFileReservationRepository(dataDir: string): ReservationRepository
     findByUserId,
     findByDateTime,
     findByTableDateTime,
+    findByEventSpaceDateTime,
+    findByEventSpaceDate,
     create,
     update,
     delete: deleteReservation,

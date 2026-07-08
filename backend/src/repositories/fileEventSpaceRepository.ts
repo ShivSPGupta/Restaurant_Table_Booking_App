@@ -2,6 +2,13 @@ import fs from "fs";
 import path from "path";
 import type { EventSpace, EventSpaceRepository } from "../types/eventSpace";
 
+function withDefaultCategory(space: EventSpace): EventSpace {
+  return {
+    ...space,
+    category: space.category || "GENERAL_EVENT",
+  };
+}
+
 function createFileEventSpaceRepository(dataDir: string): EventSpaceRepository {
   const spacesFile = path.join(dataDir, "eventSpaces.json");
 
@@ -20,7 +27,7 @@ function createFileEventSpaceRepository(dataDir: string): EventSpaceRepository {
 
     try {
       const spaces = JSON.parse(fs.readFileSync(spacesFile, "utf8"));
-      return Array.isArray(spaces) ? spaces : [];
+      return Array.isArray(spaces) ? spaces.map(withDefaultCategory) : [];
     } catch {
       return [];
     }

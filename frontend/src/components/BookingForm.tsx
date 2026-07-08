@@ -7,6 +7,7 @@ import {
   checkAvailability,
   getRestaurants,
   getApiErrorMessage,
+  type EventSpace,
   type Restaurant,
   type RestaurantTable,
   type Reservation,
@@ -18,9 +19,13 @@ const initialFormData: ReservationPayload = {
   city: "Mumbai",
   restaurantId: "",
   tableId: "",
-  tableCategory: "ANY",
+  eventSpaceId: "",
+  bookingType: "TABLE",
+  tableCategory: "PUBLIC",
+  eventSpaceCategory: "GENERAL_EVENT",
   date: "",
   time: "",
+  endTime: "",
   guests: "",
   name: "",
   contact: "",
@@ -34,6 +39,9 @@ export default function BookingForm() {
   const [availableTables, setAvailableTables] = useState<
     Pick<RestaurantTable, "id" | "name" | "category" | "capacity">[]
   >([]);
+  const [availableEventSpaces, setAvailableEventSpaces] = useState<
+    Pick<EventSpace, "id" | "name" | "category" | "capacity" | "price">[]
+  >([]);
   const [bookingSummary, setBookingSummary] = useState<Reservation | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [statusMessage, setStatusMessage] = useState("");
@@ -46,7 +54,10 @@ export default function BookingForm() {
 
     async function loadRestaurants() {
       try {
-        const cityRestaurants = await getRestaurants(formData.city);
+        const cityRestaurants = await getRestaurants(formData.city, {
+          bookingType: formData.bookingType,
+          eventSpaceCategory: formData.eventSpaceCategory,
+        });
 
         if (isMounted) {
           setRestaurants(cityRestaurants);
@@ -54,6 +65,7 @@ export default function BookingForm() {
             ...currentFormData,
             restaurantId: cityRestaurants[0]?.id || "",
             tableId: "",
+            eventSpaceId: "",
           }));
         }
       } catch {
@@ -63,6 +75,7 @@ export default function BookingForm() {
             ...currentFormData,
             restaurantId: "",
             tableId: "",
+            eventSpaceId: "",
           }));
         }
       }
@@ -73,7 +86,7 @@ export default function BookingForm() {
     return () => {
       isMounted = false;
     };
-  }, [formData.city]);
+  }, [formData.city, formData.bookingType, formData.eventSpaceCategory]);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const nextFormData = {
@@ -82,20 +95,29 @@ export default function BookingForm() {
     };
 
     if (
-      ["restaurantId", "date", "time", "guests", "tableCategory"].includes(
+      ["restaurantId", "date", "time", "endTime", "guests", "tableCategory"].includes(
         event.target.name
-      )
+      ) ||
+      ["bookingType", "eventSpaceCategory"].includes(event.target.name)
     ) {
       nextFormData.tableId = "";
+      nextFormData.eventSpaceId = "";
       setAvailableSlots([]);
       setAvailableTables([]);
+      setAvailableEventSpaces([]);
     }
 
     setFormData(nextFormData);
   };
 
   const handleCheckAvailability = async () => {
-    if (!formData.restaurantId || !formData.date || !formData.time || !formData.guests) {
+    if (
+      !formData.restaurantId ||
+      !formData.date ||
+      !formData.time ||
+      !formData.guests ||
+      (formData.bookingType === "EVENT_SPACE" && !formData.endTime)
+    ) {
       setStatusMessage("Choose a city, restaurant, date, time, and guests first.");
       setStatusKind("warning");
       setAvailableSlots([]);
@@ -109,24 +131,34 @@ export default function BookingForm() {
         restaurantId: formData.restaurantId,
         date: formData.date,
         time: formData.time,
+        endTime: formData.endTime,
         guests: formData.guests,
         tableCategory: formData.tableCategory,
+        bookingType: formData.bookingType,
+        eventSpaceCategory: formData.eventSpaceCategory,
       });
 
       if (availability.available) {
-        setStatusMessage("Matching tables are available for this slot.");
+        setStatusMessage(
+          formData.bookingType === "EVENT_SPACE"
+            ? "Matching event spaces are available for this slot."
+            : "Matching tables are available for this slot."
+        );
         setStatusKind("success");
         setAvailableSlots(availability.slots);
         setAvailableTables(availability.tables);
+        setAvailableEventSpaces(availability.eventSpaces);
         setFormData((currentFormData) => ({
           ...currentFormData,
           tableId: availability.tables[0]?.id || "",
+          eventSpaceId: availability.eventSpaces[0]?.id || "",
         }));
       } else {
-        setStatusMessage("No table is available for this guest count and time.");
+        setStatusMessage("No matching space is available for this guest count and time.");
         setStatusKind("warning");
         setAvailableSlots([]);
         setAvailableTables([]);
+        setAvailableEventSpaces([]);
       }
     } catch (error) {
       setStatusMessage(
@@ -146,7 +178,13 @@ export default function BookingForm() {
     setIsBooking(true);
 
     try {
-      if (!formData.tableId) {
+      if (formData.bookingType === "EVENT_SPACE" && !formData.eventSpaceId) {
+        setStatusMessage("Check availability and choose an available event space first.");
+        setStatusKind("warning");
+        return;
+      }
+
+      if (formData.bookingType !== "EVENT_SPACE" && !formData.tableId) {
         setStatusMessage("Check availability and choose an available table first.");
         setStatusKind("warning");
         return;
@@ -158,6 +196,7 @@ export default function BookingForm() {
       setStatusKind(null);
       setAvailableSlots([]);
       setAvailableTables([]);
+      setAvailableEventSpaces([]);
       setFormData(initialFormData);
     } catch (error) {
       setStatusMessage(
@@ -218,11 +257,21 @@ export default function BookingForm() {
               className="booking-input"
             >
               <option value="">
-                {restaurants.length ? "Select restaurant" : "No restaurants yet"}
+                {restaurants.length
+                  ? "Select restaurant"
+                  : formData.bookingType === "EVENT_SPACE"
+                    ? "No restaurants with this event space"
+                    : "No restaurants yet"}
               </option>
               {restaurants.map((restaurant) => (
                 <option key={restaurant.id} value={restaurant.id}>
                   {restaurant.name} ({restaurant.openingTime}-{restaurant.closingTime})
+                  {formData.bookingType === "EVENT_SPACE" &&
+                  restaurant.eventSpaceCategories?.length
+                    ? ` - ${restaurant.eventSpaceCategories
+                        .map(formatEventSpaceCategory)
+                        .join(", ")}`
+                    : ""}
                 </option>
               ))}
             </select>
@@ -254,6 +303,20 @@ export default function BookingForm() {
               className="booking-input"
             />
           </Field>
+          {formData.bookingType === "EVENT_SPACE" && (
+            <Field label="End time" htmlFor="endTime">
+              <input
+                id="endTime"
+                aria-label="Event end time"
+                type="time"
+                name="endTime"
+                value={formData.endTime || ""}
+                onChange={handleChange}
+                required
+                className="booking-input"
+              />
+            </Field>
+          )}
           <Field label="Guests" htmlFor="guests">
             <input
               id="guests"
@@ -269,24 +332,56 @@ export default function BookingForm() {
           </Field>
         </div>
 
-        <Field label="Table type" htmlFor="tableCategory">
+        <Field label="Booking type" htmlFor="bookingType">
+          <select
+            id="bookingType"
+            aria-label="Select booking type"
+            name="bookingType"
+            value={formData.bookingType || "TABLE"}
+            onChange={handleChange}
+            className="booking-input"
+          >
+            <option value="TABLE">Table booking</option>
+            <option value="EVENT_SPACE">Event space booking</option>
+          </select>
+        </Field>
+
+        {formData.bookingType === "EVENT_SPACE" ? (
+          <Field label="Event category" htmlFor="eventSpaceCategory">
+            <select
+              id="eventSpaceCategory"
+              aria-label="Select event space category"
+              name="eventSpaceCategory"
+              value={formData.eventSpaceCategory || "GENERAL_EVENT"}
+              onChange={handleChange}
+              className="booking-input"
+            >
+              <option value="MARRIAGE">Marriage</option>
+              <option value="BIRTHDAY_PARTY">Birthday party</option>
+              <option value="RECEPTION">Reception</option>
+              <option value="GENERAL_PARTY">General party</option>
+              <option value="GENERAL_EVENT">General event</option>
+            </select>
+          </Field>
+        ) : (
+          <Field label="Table type" htmlFor="tableCategory">
           <select
             id="tableCategory"
             aria-label="Select table type"
             name="tableCategory"
-            value={formData.tableCategory || "ANY"}
+            value={formData.tableCategory || "PUBLIC"}
             onChange={handleChange}
             className="booking-input"
           >
-            <option value="ANY">Any available table</option>
+            <option value="PUBLIC">Public / open table</option>
             <option value="COUPLE">Couple table</option>
             <option value="FAMILY">Family table</option>
             <option value="SPECIAL">Special table</option>
-            <option value="PUBLIC">Public table</option>
           </select>
-        </Field>
+          </Field>
+        )}
 
-        {availableTables.length > 0 && (
+        {availableTables.length > 0 && formData.bookingType !== "EVENT_SPACE" && (
           <Field label="Available table" htmlFor="tableId">
             <select
               id="tableId"
@@ -306,6 +401,28 @@ export default function BookingForm() {
             </select>
           </Field>
         )}
+
+        {availableEventSpaces.length > 0 &&
+          formData.bookingType === "EVENT_SPACE" && (
+            <Field label="Available event space" htmlFor="eventSpaceId">
+              <select
+                id="eventSpaceId"
+                aria-label="Select available event space"
+                name="eventSpaceId"
+                value={formData.eventSpaceId || ""}
+                onChange={handleChange}
+                required
+                className="booking-input"
+              >
+                {availableEventSpaces.map((space) => (
+                  <option key={space.id} value={space.id}>
+                    {space.name} - {formatEventSpaceCategory(space.category)} (
+                    {space.capacity} guests)
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Guest name" htmlFor="name">
@@ -394,8 +511,12 @@ export default function BookingForm() {
             Thank you, {bookingSummary.name}. Your reservation for{" "}
             <span className="font-semibold">{bookingSummary.guests}</span>{" "}
             guests on <span className="font-semibold">{bookingSummary.date}</span>{" "}
-            at <span className="font-semibold">{bookingSummary.time}</span> is
-            confirmed.
+            at{" "}
+            <span className="font-semibold">
+              {bookingSummary.time}
+              {bookingSummary.endTime ? `-${bookingSummary.endTime}` : ""}
+            </span>{" "}
+            is confirmed.
           </p>
         </div>
       )}
@@ -425,4 +546,11 @@ function Field({ label, htmlFor, children }: FieldProps) {
 
 function formatTableCategory(category: RestaurantTable["category"]): string {
   return category.charAt(0) + category.slice(1).toLowerCase();
+}
+
+function formatEventSpaceCategory(category: EventSpace["category"]): string {
+  return category
+    .split("_")
+    .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(" ");
 }

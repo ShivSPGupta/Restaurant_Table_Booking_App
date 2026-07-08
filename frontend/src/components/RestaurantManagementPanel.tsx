@@ -15,6 +15,7 @@ import {
   updateRestaurantTable,
   type AuthResponse,
   type EventSpace,
+  type EventSpaceCategory,
   type Reservation,
   type RestaurantTable,
   type TableCategory,
@@ -33,7 +34,8 @@ const initialTableForm = {
 
 const initialSpaceForm = {
   name: "",
-  occasion: "Birthday",
+  category: "GENERAL_EVENT" as EventSpaceCategory,
+  occasion: "General Event",
   capacity: "",
   price: "",
 };
@@ -82,6 +84,13 @@ function isValidTableForm(tableForm: typeof initialTableForm): boolean {
 
 function formatTableCategory(category: TableCategory): string {
   return category.charAt(0) + category.slice(1).toLowerCase();
+}
+
+function formatEventSpaceCategory(category: EventSpaceCategory): string {
+  return category
+    .split("_")
+    .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(" ");
 }
 
 export default function RestaurantManagementPanel() {
@@ -158,7 +167,15 @@ export default function RestaurantManagementPanel() {
   const handleSpaceChange = (
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    setSpaceForm({ ...spaceForm, [event.target.name]: event.target.value });
+    const nextSpaceForm = { ...spaceForm, [event.target.name]: event.target.value };
+
+    if (event.target.name === "category") {
+      nextSpaceForm.occasion = formatEventSpaceCategory(
+        event.target.value as EventSpaceCategory
+      );
+    }
+
+    setSpaceForm(nextSpaceForm);
   };
 
   const handleHoursChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -392,7 +409,7 @@ export default function RestaurantManagementPanel() {
             onChange={handleTableChange}
             className="booking-input"
           >
-            <option value="PUBLIC">Public table</option>
+            <option value="PUBLIC">Public / open table</option>
             <option value="COUPLE">Couple table</option>
             <option value="FAMILY">Family table</option>
             <option value="SPECIAL">Special table</option>
@@ -424,17 +441,26 @@ export default function RestaurantManagementPanel() {
             className="booking-input"
           />
           <select
-            aria-label="Select celebration occasion"
-            name="occasion"
-            value={spaceForm.occasion}
+            aria-label="Select event space category"
+            name="category"
+            value={spaceForm.category}
             onChange={handleSpaceChange}
             className="booking-input"
           >
-            <option>Birthday</option>
-            <option>Anniversary</option>
-            <option>Corporate</option>
-            <option>Private Dining</option>
+            <option value="MARRIAGE">Marriage</option>
+            <option value="BIRTHDAY_PARTY">Birthday party</option>
+            <option value="RECEPTION">Reception</option>
+            <option value="GENERAL_PARTY">General party</option>
+            <option value="GENERAL_EVENT">General event</option>
           </select>
+          <input
+            aria-label="Event space occasion label"
+            name="occasion"
+            value={spaceForm.occasion}
+            onChange={handleSpaceChange}
+            placeholder="Birthday party"
+            className="booking-input"
+          />
           <div className="grid gap-3 sm:grid-cols-2">
             <input
               aria-label="Celebration space capacity"
@@ -611,7 +637,7 @@ export default function RestaurantManagementPanel() {
                       onChange={handleTableEditChange}
                       className="booking-input"
                     >
-                      <option value="PUBLIC">Public table</option>
+                      <option value="PUBLIC">Public / open table</option>
                       <option value="COUPLE">Couple table</option>
                       <option value="FAMILY">Family table</option>
                       <option value="SPECIAL">Special table</option>
@@ -693,7 +719,8 @@ export default function RestaurantManagementPanel() {
           {spaces.length ? (
             spaces.map((space) => (
               <p key={space.id} className="text-sm text-[#5f493a]">
-                {space.name} - {space.occasion} - {space.capacity} guests
+                {space.name} - {formatEventSpaceCategory(space.category)} -{" "}
+                {space.capacity} guests
               </p>
             ))
           ) : (

@@ -1,12 +1,18 @@
 import type { TableCategory } from "./table";
+import type { EventSpaceCategory } from "./eventSpace";
+
+export type BookingType = "TABLE" | "EVENT_SPACE";
 
 export type Reservation = {
   id: string;
   restaurantId: string;
   userId?: string | null;
   tableId?: string | null;
+  eventSpaceId?: string | null;
+  bookingType: BookingType;
   date: string;
   time: string;
+  endTime?: string | null;
   guests: number;
   name: string;
   contact: string;
@@ -16,9 +22,13 @@ export type Reservation = {
 export type ReservationRequest = {
   restaurantId?: string;
   tableId?: string;
+  eventSpaceId?: string;
+  bookingType?: BookingType;
   tableCategory?: TableCategory | "ANY";
+  eventSpaceCategory?: EventSpaceCategory | "ANY";
   date?: string;
   time?: string;
+  endTime?: string;
   guests?: string | number;
   name?: string;
   contact?: string;
@@ -27,8 +37,11 @@ export type ReservationRequest = {
 export type AvailabilityRequest = {
   date?: string;
   time?: string;
+  endTime?: string;
   guests?: string | number;
   tableCategory?: TableCategory | "ANY";
+  bookingType?: BookingType;
+  eventSpaceCategory?: EventSpaceCategory | "ANY";
 };
 
 export type AvailabilityResponse = {
@@ -39,6 +52,13 @@ export type AvailabilityResponse = {
     name: string;
     category: TableCategory;
     capacity: number;
+  }[];
+  eventSpaces: {
+    id: string;
+    name: string;
+    category: EventSpaceCategory;
+    capacity: number;
+    price?: number | null;
   }[];
 };
 
@@ -58,6 +78,15 @@ export type ReservationRepository = {
     date: string,
     time: string
   ) => Promise<Reservation | null | undefined> | Reservation | null | undefined;
+  findByEventSpaceDateTime: (
+    eventSpaceId: string,
+    date: string,
+    time: string
+  ) => Promise<Reservation | null | undefined> | Reservation | null | undefined;
+  findByEventSpaceDate: (
+    eventSpaceId: string,
+    date: string
+  ) => Promise<Reservation[]> | Reservation[];
   create: (reservation: Reservation) => Promise<Reservation> | Reservation;
   update: (
     restaurantId: string,

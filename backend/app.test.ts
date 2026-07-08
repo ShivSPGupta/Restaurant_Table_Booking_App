@@ -120,7 +120,7 @@ async function createTestTable(
   token: string,
   name = "Table 1",
   capacity = 4,
-  category = "PUBLIC"
+  category = "FAMILY"
 ) {
   const response = await makeRequest<{
     id: string;
@@ -133,6 +133,36 @@ async function createTestTable(
       name,
       capacity,
       category,
+    },
+    authHeaders(token)
+  );
+
+  assert.equal(response.statusCode, 201);
+  assert.ok(response.body);
+
+  return response.body;
+}
+
+async function createTestEventSpace(
+  token: string,
+  name = "Celebration Hall",
+  capacity = 80,
+  category = "BIRTHDAY_PARTY"
+) {
+  const response = await makeRequest<{
+    id: string;
+    name: string;
+    category: string;
+    capacity: number;
+  }>(
+    "/api/restaurant/event-spaces",
+    "POST",
+    {
+      name,
+      category,
+      occasion: category,
+      capacity,
+      price: 2500,
     },
     authHeaders(token)
   );
@@ -283,7 +313,7 @@ test("duplicate restaurant register is rejected", async () => {
 });
 
 test("availability returns available tables before a reservation exists", async () => {
-  const { token } = await registerTestRestaurant();
+  const { token, restaurant } = await registerTestRestaurant();
   const table = await createTestTable(token);
   const response = await makeRequest<{
     available: boolean;
@@ -293,9 +323,11 @@ test("availability returns available tables before a reservation exists", async 
     "/api/check-availability",
     "POST",
     {
+      restaurantId: restaurant.id,
       date: "2026-07-15",
       time: "19:00",
       guests: 4,
+      tableCategory: "FAMILY",
     },
     authHeaders(token)
   );
@@ -306,6 +338,59 @@ test("availability returns available tables before a reservation exists", async 
   assert.deepEqual(response.body.slots, ["19:00"]);
   assert.equal(response.body.tables.length, 1);
   assert.equal(response.body.tables[0].id, table.id);
+});
+
+test("table availability rejects any table category", async () => {
+  const { token, restaurant } = await registerTestRestaurant();
+  await createTestTable(token);
+  const response = await makeRequest<{ error: string }>(
+    "/api/check-availability",
+    "POST",
+    {
+      restaurantId: restaurant.id,
+      date: "2026-07-15",
+      time: "19:00",
+      guests: 4,
+      tableCategory: "ANY",
+    },
+    authHeaders(token)
+  );
+
+  assert.equal(response.statusCode, 400);
+  assert.ok(response.body);
+  assert.equal(
+    response.body.error,
+    "Select Public, Couple, Family, or Special table type."
+  );
+});
+
+test("public table availability only returns public tables", async () => {
+  const { token, restaurant } = await registerTestRestaurant();
+  const publicTable = await createTestTable(token, "Open Table", 4, "PUBLIC");
+  await createTestTable(token, "Family Booth", 6, "FAMILY");
+  await createTestTable(token, "Couple Nook", 2, "COUPLE");
+  const response = await makeRequest<{
+    available: boolean;
+    tables: { id: string; category: string }[];
+  }>(
+    "/api/check-availability",
+    "POST",
+    {
+      restaurantId: restaurant.id,
+      date: "2026-07-15",
+      time: "19:00",
+      guests: 4,
+      tableCategory: "PUBLIC",
+    },
+    authHeaders(token)
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.ok(response.body);
+  assert.equal(response.body.available, true);
+  assert.equal(response.body.tables.length, 1);
+  assert.equal(response.body.tables[0].id, publicTable.id);
+  assert.equal(response.body.tables[0].category, "PUBLIC");
 });
 
 test("availability can filter tables by category", async () => {
@@ -333,6 +418,182 @@ test("availability can filter tables by category", async () => {
   assert.equal(response.body.tables.length, 1);
   assert.equal(response.body.tables[0].id, familyTable.id);
   assert.equal(response.body.tables[0].category, "FAMILY");
+});
+
+test("user can book an event space by category", async () => {
+  const restaurant = await registerTestRestaurant();
+  const user = await registerTestUser();
+  const eventSpace = await createTestEventSpace(
+    restaurant.token,
+    "Reception Hall",
+    100,
+    "RECEPTION"
+  );
+  const availabilityResponse = await makeRequest<{
+    available: boolean;
+    eventSpaces: { id: string; category: string }[];
+  }>(
+    "/api/check-availability",
+    "POST",
+    {
+      restaurantId: restaurant.restaurant.id,
+      bookingType: "EVENT_SPACE",
+      eventSpaceCategory: "RECEPTION",
+      date: "2026-07-15",
+      time: "19:00",
+      endTime: "23:00",
+      guests: 60,
+    },
+    authHeaders(user.token)
+  );
+
+  assert.equal(availabilityResponse.statusCode, 200);
+  assert.ok(availabilityResponse.body);
+  assert.equal(availabilityResponse.body.available, true);
+  assert.equal(availabilityResponse.body.eventSpaces.length, 1);
+  assert.equal(availabilityResponse.body.eventSpaces[0].id, eventSpace.id);
+  assert.equal(availabilityResponse.body.eventSpaces[0].category, "RECEPTION");
+
+  const bookingResponse = await makeRequest<{
+    id: string;
+    bookingType: string;
+    eventSpaceId: string;
+  }>(
+    "/api/book-table",
+    "POST",
+    {
+      restaurantId: restaurant.restaurant.id,
+      bookingType: "EVENT_SPACE",
+      eventSpaceId: eventSpace.id,
+      eventSpaceCategory: "RECEPTION",
+      date: "2026-07-15",
+      time: "19:00",
+      endTime: "23:00",
+      guests: 60,
+      name: "Asha",
+      contact: "9999999999",
+    },
+    authHeaders(user.token)
+  );
+
+  assert.equal(bookingResponse.statusCode, 201);
+  assert.ok(bookingResponse.body);
+  assert.equal(bookingResponse.body.bookingType, "EVENT_SPACE");
+  assert.equal(bookingResponse.body.eventSpaceId, eventSpace.id);
+});
+
+test("event space availability rejects any event category", async () => {
+  const restaurant = await registerTestRestaurant();
+  const user = await registerTestUser();
+  await createTestEventSpace(
+    restaurant.token,
+    "Reception Hall",
+    100,
+    "RECEPTION"
+  );
+  const response = await makeRequest<{ error: string }>(
+    "/api/check-availability",
+    "POST",
+    {
+      restaurantId: restaurant.restaurant.id,
+      bookingType: "EVENT_SPACE",
+      eventSpaceCategory: "ANY",
+      date: "2026-07-15",
+      time: "19:00",
+      endTime: "23:00",
+      guests: 60,
+    },
+    authHeaders(user.token)
+  );
+
+  assert.equal(response.statusCode, 400);
+  assert.ok(response.body);
+  assert.equal(response.body.error, "Select a specific event space category.");
+});
+
+test("public restaurants can be filtered by event space category", async () => {
+  const weddingRestaurant = await registerTestRestaurant("wedding@test.local");
+  const birthdayRestaurant = await registerTestRestaurant("birthday@test.local");
+  await createTestEventSpace(
+    weddingRestaurant.token,
+    "Royal Marriage Hall",
+    200,
+    "MARRIAGE"
+  );
+  await createTestEventSpace(
+    birthdayRestaurant.token,
+    "Birthday Lounge",
+    80,
+    "BIRTHDAY_PARTY"
+  );
+
+  const response = await makeRequest<{
+    id: string;
+    eventSpaceCategories: string[];
+  }[]>(
+    "/api/restaurants?city=Mumbai&bookingType=EVENT_SPACE&eventSpaceCategory=MARRIAGE",
+    "GET"
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.ok(response.body);
+  assert.equal(response.body.length, 1);
+  assert.equal(response.body[0].id, weddingRestaurant.restaurant.id);
+  assert.deepEqual(response.body[0].eventSpaceCategories, ["MARRIAGE"]);
+});
+
+test("event space bookings reject overlapping time ranges", async () => {
+  const restaurant = await registerTestRestaurant();
+  const user = await registerTestUser();
+  const eventSpace = await createTestEventSpace(
+    restaurant.token,
+    "Grand Hall",
+    120,
+    "MARRIAGE"
+  );
+
+  const firstBooking = await makeRequest(
+    "/api/book-table",
+    "POST",
+    {
+      restaurantId: restaurant.restaurant.id,
+      bookingType: "EVENT_SPACE",
+      eventSpaceId: eventSpace.id,
+      eventSpaceCategory: "MARRIAGE",
+      date: "2026-07-15",
+      time: "19:00",
+      endTime: "23:00",
+      guests: 80,
+      name: "Asha",
+      contact: "9999999999",
+    },
+    authHeaders(user.token)
+  );
+  const overlappingBooking = await makeRequest<{ error: string }>(
+    "/api/book-table",
+    "POST",
+    {
+      restaurantId: restaurant.restaurant.id,
+      bookingType: "EVENT_SPACE",
+      eventSpaceId: eventSpace.id,
+      eventSpaceCategory: "MARRIAGE",
+      date: "2026-07-15",
+      time: "21:00",
+      endTime: "22:00",
+      guests: 50,
+      name: "Neha",
+      contact: "8888888888",
+    },
+    authHeaders(user.token)
+  );
+
+  assert.equal(firstBooking.statusCode, 201);
+  assert.equal(overlappingBooking.statusCode, 409);
+  assert.ok(overlappingBooking.body);
+  assert.equal(
+    overlappingBooking.body.error,
+    "This event space is already booked during the selected time."
+  );
 });
 
 test("reservation endpoints require login", async () => {
@@ -387,6 +648,7 @@ test("booking a table persists the reservation", async () => {
   const table = await createTestTable(token);
   const booking = {
     tableId: table.id,
+    tableCategory: "FAMILY",
     date: "2026-07-15",
     time: "19:00",
     guests: 4,
@@ -422,6 +684,7 @@ test("restaurant can modify and cancel its reservation", async () => {
     "POST",
     {
       tableId: table.id,
+      tableCategory: "FAMILY",
       date: "2026-07-15",
       time: "19:00",
       guests: 4,
@@ -474,6 +737,7 @@ test("user can modify and cancel their own reservation", async () => {
     {
       restaurantId: restaurant.restaurant.id,
       tableId: table.id,
+      tableCategory: "FAMILY",
       date: "2026-07-15",
       time: "19:00",
       guests: 4,
@@ -527,6 +791,7 @@ test("user cannot modify another user's reservation", async () => {
     {
       restaurantId: restaurant.restaurant.id,
       tableId: table.id,
+      tableCategory: "FAMILY",
       date: "2026-07-15",
       time: "19:00",
       guests: 4,
@@ -558,6 +823,7 @@ test("duplicate bookings are rejected", async () => {
   const table = await createTestTable(token);
   const booking = {
     tableId: table.id,
+    tableCategory: "FAMILY",
     date: "2026-07-15",
     time: "19:00",
     guests: 4,
@@ -599,6 +865,7 @@ test("different tables can book the same time slot independently", async () => {
     {
       ...booking,
       tableId: firstTable.id,
+      tableCategory: "FAMILY",
     },
     authHeaders(firstRestaurant.token)
   );
@@ -608,6 +875,7 @@ test("different tables can book the same time slot independently", async () => {
     {
       ...booking,
       tableId: secondTable.id,
+      tableCategory: "FAMILY",
     },
     authHeaders(firstRestaurant.token)
   );

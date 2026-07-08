@@ -84,7 +84,7 @@ export const reservationPaths = {
       tags: ["Reservations"],
       summary: "Check whether a restaurant slot is available",
       description:
-        "Guests provide restaurantId, guest count, and optional table category. Restaurant accounts automatically check their own restaurant. The response includes active matching tables that can seat the party and are not booked for the requested time.",
+        "Guests provide restaurantId, guest count, booking type, and optional table/event-space category. Event-space availability also requires an endTime and checks overlapping time ranges. Restaurant accounts automatically check their own restaurant. The response includes active matching tables or event spaces that can seat the party and are not booked for the requested time.",
       security: [{ bearerAuth: [] }],
       requestBody: {
         required: true,
@@ -117,7 +117,7 @@ export const reservationPaths = {
       tags: ["Reservations"],
       summary: "Create a table reservation",
       description:
-        "Guests book a selected restaurant and available table. Restaurant accounts can create a booking for their own restaurant. If a category is provided, the selected table must match it.",
+        "Guests book a selected restaurant with either an available table or event space. Event-space bookings require start and end time and block overlapping reservations. Restaurant accounts can create a booking for their own restaurant. If a category is provided, the selected table or event space must match it.",
       security: [{ bearerAuth: [] }],
       requestBody: {
         required: true,
