@@ -2,6 +2,13 @@ import fs from "fs";
 import path from "path";
 import type { RestaurantTable, TableRepository } from "../types/table";
 
+function withDefaultCategory(table: RestaurantTable): RestaurantTable {
+  return {
+    ...table,
+    category: table.category || "PUBLIC",
+  };
+}
+
 function createFileTableRepository(dataDir: string): TableRepository {
   const tablesFile = path.join(dataDir, "tables.json");
 
@@ -20,7 +27,7 @@ function createFileTableRepository(dataDir: string): TableRepository {
 
     try {
       const tables = JSON.parse(fs.readFileSync(tablesFile, "utf8"));
-      return Array.isArray(tables) ? tables : [];
+      return Array.isArray(tables) ? tables.map(withDefaultCategory) : [];
     } catch {
       return [];
     }
@@ -45,7 +52,7 @@ function createFileTableRepository(dataDir: string): TableRepository {
   function update(
     restaurantId: string,
     tableId: string,
-    updates: Partial<Pick<RestaurantTable, "name" | "capacity" | "isActive">>
+    updates: Partial<Pick<RestaurantTable, "name" | "category" | "capacity" | "isActive">>
   ): RestaurantTable | null {
     const tables = findAll();
     const tableIndex = tables.findIndex(

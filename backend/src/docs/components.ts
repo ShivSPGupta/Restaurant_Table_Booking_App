@@ -258,7 +258,7 @@ export const openApiComponents = {
     },
     AvailabilityRequest: {
       type: "object",
-      required: ["date", "time"],
+      required: ["date", "time", "guests"],
       properties: {
         restaurantId: {
           type: "string",
@@ -274,11 +274,21 @@ export const openApiComponents = {
           type: "string",
           example: "19:00",
         },
+        guests: {
+          type: "integer",
+          minimum: 1,
+          example: 4,
+        },
+        tableCategory: {
+          type: "string",
+          enum: ["ANY", "PUBLIC", "COUPLE", "FAMILY", "SPECIAL"],
+          example: "FAMILY",
+        },
       },
     },
     AvailabilityResponse: {
       type: "object",
-      required: ["available", "slots"],
+      required: ["available", "slots", "tables"],
       properties: {
         available: {
           type: "boolean",
@@ -291,11 +301,37 @@ export const openApiComponents = {
           },
           example: ["19:00"],
         },
+        tables: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["id", "name", "category", "capacity"],
+            properties: {
+              id: {
+                type: "string",
+                example: "clx7bp2dn0000q8q2p5w2x9t1",
+              },
+              name: {
+                type: "string",
+                example: "Window Table 1",
+              },
+              category: {
+                type: "string",
+                enum: ["PUBLIC", "COUPLE", "FAMILY", "SPECIAL"],
+                example: "FAMILY",
+              },
+              capacity: {
+                type: "integer",
+                example: 4,
+              },
+            },
+          },
+        },
       },
     },
     BookingRequest: {
       type: "object",
-      required: ["date", "time", "guests", "name", "contact"],
+      required: ["tableId", "date", "time", "guests", "name", "contact"],
       properties: {
         restaurantId: {
           type: "string",
@@ -304,8 +340,12 @@ export const openApiComponents = {
         },
         tableId: {
           type: "string",
-          nullable: true,
           example: "clx7bp2dn0000q8q2p5w2x9t1",
+        },
+        tableCategory: {
+          type: "string",
+          enum: ["ANY", "PUBLIC", "COUPLE", "FAMILY", "SPECIAL"],
+          example: "FAMILY",
         },
         date: {
           type: "string",
@@ -429,6 +469,11 @@ export const openApiComponents = {
           type: "string",
           example: "Window Table 1",
         },
+        category: {
+          type: "string",
+          enum: ["PUBLIC", "COUPLE", "FAMILY", "SPECIAL"],
+          example: "FAMILY",
+        },
         capacity: {
           type: "integer",
           minimum: 1,
@@ -447,7 +492,15 @@ export const openApiComponents = {
         },
         {
           type: "object",
-          required: ["id", "restaurantId", "name", "capacity", "isActive", "createdAt"],
+          required: [
+            "id",
+            "restaurantId",
+            "name",
+            "category",
+            "capacity",
+            "isActive",
+            "createdAt",
+          ],
           properties: {
             id: {
               type: "string",

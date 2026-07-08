@@ -6,11 +6,13 @@ A production-style full-stack restaurant reservation platform built with Next.js
 
 - Role-based authentication for `user` and `restaurant` accounts.
 - City-based restaurant discovery before booking.
-- Login-required availability checks and booking flow.
-- User dashboard for personal booking history.
+- Login-required availability checks with category-based table selection.
+- User dashboard for personal booking history with modify and cancel actions.
 - Restaurant dashboard for reservations, tables, event spaces, and business hours.
 - Restaurant booking management with modify and cancel actions.
-- Table management with add, modify, activate/deactivate, and duplicate-name protection.
+- Table-aware booking so multiple tables can be reserved at the same time while the same table cannot be double-booked.
+- Table categories for `Public`, `Couple`, `Family`, and `Special` seating.
+- Table management with add, modify, category, activate/deactivate, capacity checks, and duplicate-name protection.
 - Supabase PostgreSQL integration through Prisma.
 - Dedicated PostgreSQL schema and prefixed tables to safely share one Supabase project with other apps.
 - Swagger/OpenAPI documentation for backend APIs.
@@ -90,7 +92,7 @@ restaurant_booking.restaurant_booking_tables
 restaurant_booking.restaurant_booking_event_spaces
 ```
 
-Table names are protected against duplicates per restaurant with a normalized name column and database unique constraint. This prevents duplicate names such as `Table 1`, ` table 1 `, and `TABLE 1` from being stored as separate tables.
+Table names are protected against duplicates per restaurant with a normalized name column and database unique constraint. This prevents duplicate names such as `Table 1`, ` table 1 `, and `TABLE 1` from being stored as separate tables. Existing tables default to the `Public` category, while restaurants can organize new tables as `Couple`, `Family`, or `Special`. Reservations are protected at table/date/time level, so one restaurant can accept multiple bookings in the same time slot across different tables.
 
 Use two database URLs:
 
@@ -203,9 +205,11 @@ GET  /api/restaurants?city=Mumbai
 POST /api/check-availability
 POST /api/book-table
 GET  /api/reservations
+PATCH /api/reservations/:reservationId
+DELETE /api/reservations/:reservationId
 ```
 
-`GET /api/restaurants` is public. Availability checks, booking, and reservation history require login with either a user or restaurant token.
+`GET /api/restaurants` is public. Availability checks, booking, and reservation history require login with either a user or restaurant token. Availability returns active tables that match the party size, optional table category, and selected date/time.
 
 Restaurant management:
 
@@ -227,7 +231,7 @@ Protected routes require a bearer token:
 Authorization: Bearer <token>
 ```
 
-Restaurants can only access their own reservations, tables, event spaces, and availability settings. Users can create bookings for selected restaurants and view bookings linked to their own account.
+Restaurants can only access their own reservations, tables, event spaces, and availability settings. Users can create bookings for selected restaurants and view, modify, or cancel bookings linked to their own account.
 
 Dashboard behavior:
 

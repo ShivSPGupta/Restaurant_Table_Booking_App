@@ -1,11 +1,12 @@
 import prisma from "../lib/prisma";
-import type { RestaurantTable, TableRepository } from "../types/table";
+import type { RestaurantTable, TableCategory, TableRepository } from "../types/table";
 
 type PrismaTable = {
   id: string;
   restaurantId: string;
   name: string;
   normalizedName?: string | null;
+  category?: string | null;
   capacity: number;
   isActive: boolean;
   createdAt: Date;
@@ -16,6 +17,7 @@ function mapTable(table: PrismaTable): RestaurantTable {
     id: table.id,
     restaurantId: table.restaurantId,
     name: table.name,
+    category: (table.category || "PUBLIC") as TableCategory,
     capacity: table.capacity,
     isActive: table.isActive,
     createdAt: table.createdAt.toISOString(),
@@ -45,6 +47,7 @@ function createPrismaTableRepository(): TableRepository {
         restaurantId: table.restaurantId,
         name: table.name,
         normalizedName: normalizeTableName(table.name),
+        category: table.category,
         capacity: table.capacity,
         isActive: table.isActive,
         createdAt: new Date(table.createdAt),
@@ -57,7 +60,7 @@ function createPrismaTableRepository(): TableRepository {
   async function update(
     restaurantId: string,
     tableId: string,
-    updates: Partial<Pick<RestaurantTable, "name" | "capacity" | "isActive">>
+    updates: Partial<Pick<RestaurantTable, "name" | "category" | "capacity" | "isActive">>
   ): Promise<RestaurantTable | null> {
     const existingTable = await prisma.table.findFirst({
       where: { id: tableId, restaurantId },

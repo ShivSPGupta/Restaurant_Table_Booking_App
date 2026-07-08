@@ -53,10 +53,26 @@ function createPrismaReservationRepository(): ReservationRepository {
     date: string,
     time: string
   ): Promise<Reservation | null> {
+    const reservation = await prisma.reservation.findFirst({
+      where: {
+        restaurantId,
+        date,
+        time,
+      },
+    });
+
+    return reservation ? mapReservation(reservation) : null;
+  }
+
+  async function findByTableDateTime(
+    tableId: string,
+    date: string,
+    time: string
+  ): Promise<Reservation | null> {
     const reservation = await prisma.reservation.findUnique({
       where: {
-        restaurantId_date_time: {
-          restaurantId,
+        tableId_date_time: {
+          tableId,
           date,
           time,
         },
@@ -130,6 +146,7 @@ function createPrismaReservationRepository(): ReservationRepository {
     findByRestaurantId,
     findByUserId,
     findByDateTime,
+    findByTableDateTime,
     create,
     update,
     delete: deleteReservation,

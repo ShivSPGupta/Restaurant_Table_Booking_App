@@ -9,6 +9,8 @@ function createReservationRoutes(reservationController: ReservationController) {
 
   router.use(requireAuth);
   router.get("/reservations", reservationController.listMyReservations);
+  router.patch("/reservations/:reservationId", reservationController.updateMyReservation);
+  router.delete("/reservations/:reservationId", reservationController.cancelMyReservation);
   router.post("/check-availability", reservationController.checkAvailability);
   router.post("/book-table", reservationController.createReservation);
 

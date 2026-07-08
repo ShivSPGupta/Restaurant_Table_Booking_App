@@ -29,7 +29,10 @@ function createApp() {
   const tableRepository = createTableRepository();
   const eventSpaceRepository = createEventSpaceRepository();
   const authService = createAuthService(restaurantRepository, userRepository);
-  const reservationService = createReservationService(reservationRepository);
+  const reservationService = createReservationService(
+    reservationRepository,
+    tableRepository
+  );
   const restaurantManagementService = createRestaurantManagementService(
     restaurantRepository,
     reservationRepository,

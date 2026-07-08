@@ -22,7 +22,7 @@ model Reservation {
   user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   table        Table?      @relation(fields: [tableId], references: [id], onDelete: SetNull)
 
-  @@unique([restaurantId, date, time])
+  @@unique([tableId, date, time])
   @@index([restaurantId])
   @@index([userId])
   @@index([tableId])
@@ -87,6 +87,7 @@ model Table {
   restaurantId String
   name         String
   normalizedName String?
+  category     String        @default("PUBLIC")
   capacity     Int
   isActive     Boolean       @default(true)
   createdAt    DateTime      @default(now())

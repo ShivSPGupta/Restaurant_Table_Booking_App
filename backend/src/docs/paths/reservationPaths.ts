@@ -26,12 +26,65 @@ export const reservationPaths = {
       },
     },
   },
+  "/api/reservations/{reservationId}": {
+    patch: {
+      tags: ["Reservations"],
+      summary: "Modify a logged-in user's reservation",
+      description:
+        "Users can modify only reservations linked to their own account.",
+      security: [{ bearerAuth: [] }],
+      parameters: [{ $ref: "#/components/parameters/ReservationId" }],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              $ref: "#/components/schemas/UpdateReservationRequest",
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Reservation updated successfully.",
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/Reservation",
+              },
+            },
+          },
+        },
+        "400": errorResponse,
+        "401": unauthorizedResponse,
+        "403": errorResponse,
+        "404": errorResponse,
+        "409": errorResponse,
+      },
+    },
+    delete: {
+      tags: ["Reservations"],
+      summary: "Cancel a logged-in user's reservation",
+      description:
+        "Users can cancel only reservations linked to their own account.",
+      security: [{ bearerAuth: [] }],
+      parameters: [{ $ref: "#/components/parameters/ReservationId" }],
+      responses: {
+        "204": {
+          description: "Reservation cancelled successfully.",
+        },
+        "401": unauthorizedResponse,
+        "403": errorResponse,
+        "404": errorResponse,
+      },
+    },
+  },
   "/api/check-availability": {
     post: {
       tags: ["Reservations"],
       summary: "Check whether a restaurant slot is available",
       description:
-        "Guests provide restaurantId. Restaurant accounts automatically check their own restaurant.",
+        "Guests provide restaurantId, guest count, and optional table category. Restaurant accounts automatically check their own restaurant. The response includes active matching tables that can seat the party and are not booked for the requested time.",
       security: [{ bearerAuth: [] }],
       requestBody: {
         required: true,
@@ -64,7 +117,7 @@ export const reservationPaths = {
       tags: ["Reservations"],
       summary: "Create a table reservation",
       description:
-        "Guests book a selected restaurant. Restaurant accounts can create a booking for their own restaurant.",
+        "Guests book a selected restaurant and available table. Restaurant accounts can create a booking for their own restaurant. If a category is provided, the selected table must match it.",
       security: [{ bearerAuth: [] }],
       requestBody: {
         required: true,

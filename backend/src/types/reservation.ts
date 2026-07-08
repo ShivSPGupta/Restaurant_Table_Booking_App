@@ -1,3 +1,5 @@
+import type { TableCategory } from "./table";
+
 export type Reservation = {
   id: string;
   restaurantId: string;
@@ -14,6 +16,7 @@ export type Reservation = {
 export type ReservationRequest = {
   restaurantId?: string;
   tableId?: string;
+  tableCategory?: TableCategory | "ANY";
   date?: string;
   time?: string;
   guests?: string | number;
@@ -24,11 +27,19 @@ export type ReservationRequest = {
 export type AvailabilityRequest = {
   date?: string;
   time?: string;
+  guests?: string | number;
+  tableCategory?: TableCategory | "ANY";
 };
 
 export type AvailabilityResponse = {
   available: boolean;
   slots: string[];
+  tables: {
+    id: string;
+    name: string;
+    category: TableCategory;
+    capacity: number;
+  }[];
 };
 
 export type ReservationRepository = {
@@ -39,6 +50,11 @@ export type ReservationRepository = {
   findByUserId: (userId: string) => Promise<Reservation[]> | Reservation[];
   findByDateTime: (
     restaurantId: string,
+    date: string,
+    time: string
+  ) => Promise<Reservation | null | undefined> | Reservation | null | undefined;
+  findByTableDateTime: (
+    tableId: string,
     date: string,
     time: string
   ) => Promise<Reservation | null | undefined> | Reservation | null | undefined;

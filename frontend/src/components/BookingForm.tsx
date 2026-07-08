@@ -8,6 +8,7 @@ import {
   getRestaurants,
   getApiErrorMessage,
   type Restaurant,
+  type RestaurantTable,
   type Reservation,
   type ReservationPayload,
 } from "@/lib/api";
@@ -16,6 +17,8 @@ import { indiaCities } from "@/lib/indiaCities";
 const initialFormData: ReservationPayload = {
   city: "Mumbai",
   restaurantId: "",
+  tableId: "",
+  tableCategory: "ANY",
   date: "",
   time: "",
   guests: "",
@@ -28,6 +31,9 @@ type StatusKind = "success" | "warning" | null;
 export default function BookingForm() {
   const [formData, setFormData] = useState<ReservationPayload>(initialFormData);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [availableTables, setAvailableTables] = useState<
+    Pick<RestaurantTable, "id" | "name" | "category" | "capacity">[]
+  >([]);
   const [bookingSummary, setBookingSummary] = useState<Reservation | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [statusMessage, setStatusMessage] = useState("");
@@ -47,6 +53,7 @@ export default function BookingForm() {
           setFormData((currentFormData) => ({
             ...currentFormData,
             restaurantId: cityRestaurants[0]?.id || "",
+            tableId: "",
           }));
         }
       } catch {
@@ -55,6 +62,7 @@ export default function BookingForm() {
           setFormData((currentFormData) => ({
             ...currentFormData,
             restaurantId: "",
+            tableId: "",
           }));
         }
       }
@@ -68,14 +76,30 @@ export default function BookingForm() {
   }, [formData.city]);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [event.target.name]: event.target.value });
+    const nextFormData = {
+      ...formData,
+      [event.target.name]: event.target.value,
+    };
+
+    if (
+      ["restaurantId", "date", "time", "guests", "tableCategory"].includes(
+        event.target.name
+      )
+    ) {
+      nextFormData.tableId = "";
+      setAvailableSlots([]);
+      setAvailableTables([]);
+    }
+
+    setFormData(nextFormData);
   };
 
   const handleCheckAvailability = async () => {
-    if (!formData.restaurantId || !formData.date || !formData.time) {
-      setStatusMessage("Choose a city, restaurant, date, and time first.");
+    if (!formData.restaurantId || !formData.date || !formData.time || !formData.guests) {
+      setStatusMessage("Choose a city, restaurant, date, time, and guests first.");
       setStatusKind("warning");
       setAvailableSlots([]);
+      setAvailableTables([]);
       return;
     }
 
@@ -85,16 +109,24 @@ export default function BookingForm() {
         restaurantId: formData.restaurantId,
         date: formData.date,
         time: formData.time,
+        guests: formData.guests,
+        tableCategory: formData.tableCategory,
       });
 
       if (availability.available) {
-        setStatusMessage("Slot is available!");
+        setStatusMessage("Matching tables are available for this slot.");
         setStatusKind("success");
         setAvailableSlots(availability.slots);
+        setAvailableTables(availability.tables);
+        setFormData((currentFormData) => ({
+          ...currentFormData,
+          tableId: availability.tables[0]?.id || "",
+        }));
       } else {
-        setStatusMessage("Slot is already booked or not available.");
+        setStatusMessage("No table is available for this guest count and time.");
         setStatusKind("warning");
         setAvailableSlots([]);
+        setAvailableTables([]);
       }
     } catch (error) {
       setStatusMessage(
@@ -114,11 +146,18 @@ export default function BookingForm() {
     setIsBooking(true);
 
     try {
+      if (!formData.tableId) {
+        setStatusMessage("Check availability and choose an available table first.");
+        setStatusKind("warning");
+        return;
+      }
+
       const reservation = await bookTable(formData);
       setBookingSummary(reservation);
       setStatusMessage("");
       setStatusKind(null);
       setAvailableSlots([]);
+      setAvailableTables([]);
       setFormData(initialFormData);
     } catch (error) {
       setStatusMessage(
@@ -229,6 +268,44 @@ export default function BookingForm() {
             />
           </Field>
         </div>
+
+        <Field label="Table type" htmlFor="tableCategory">
+          <select
+            id="tableCategory"
+            aria-label="Select table type"
+            name="tableCategory"
+            value={formData.tableCategory || "ANY"}
+            onChange={handleChange}
+            className="booking-input"
+          >
+            <option value="ANY">Any available table</option>
+            <option value="COUPLE">Couple table</option>
+            <option value="FAMILY">Family table</option>
+            <option value="SPECIAL">Special table</option>
+            <option value="PUBLIC">Public table</option>
+          </select>
+        </Field>
+
+        {availableTables.length > 0 && (
+          <Field label="Available table" htmlFor="tableId">
+            <select
+              id="tableId"
+              aria-label="Select available table"
+              name="tableId"
+              value={formData.tableId || ""}
+              onChange={handleChange}
+              required
+              className="booking-input"
+            >
+              {availableTables.map((table) => (
+                <option key={table.id} value={table.id}>
+                  {table.name} - {formatTableCategory(table.category)} (
+                  {table.capacity} seats)
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Guest name" htmlFor="name">
@@ -344,4 +421,8 @@ function Field({ label, htmlFor, children }: FieldProps) {
       {children}
     </div>
   );
+}
+
+function formatTableCategory(category: RestaurantTable["category"]): string {
+  return category.charAt(0) + category.slice(1).toLowerCase();
 }

@@ -4,12 +4,15 @@ export type ReservationPayload = {
   city?: string;
   restaurantId?: string;
   tableId?: string;
+  tableCategory?: TableCategory | "ANY";
   date: string;
   time: string;
   guests: string;
   name: string;
   contact: string;
 };
+
+export type TableCategory = "PUBLIC" | "COUPLE" | "FAMILY" | "SPECIAL";
 
 export type Reservation = {
   id: string;
@@ -28,6 +31,7 @@ export type RestaurantTable = {
   id: string;
   restaurantId: string;
   name: string;
+  category: TableCategory;
   capacity: number;
   isActive: boolean;
   createdAt: string;
@@ -47,6 +51,7 @@ export type EventSpace = {
 export type AvailabilityResponse = {
   available: boolean;
   slots: string[];
+  tables: Pick<RestaurantTable, "id" | "name" | "category" | "capacity">[];
 };
 
 export type RestaurantAuthPayload = {
@@ -123,13 +128,20 @@ export async function checkAvailability({
   restaurantId,
   date,
   time,
-}: Pick<ReservationPayload, "restaurantId" | "date" | "time">): Promise<AvailabilityResponse> {
+  guests,
+  tableCategory,
+}: Pick<
+  ReservationPayload,
+  "restaurantId" | "date" | "time" | "guests" | "tableCategory"
+>): Promise<AvailabilityResponse> {
   const response = await apiClient.post<AvailabilityResponse>(
     "/api/check-availability",
     {
       restaurantId,
       date,
       time,
+      guests,
+      tableCategory,
     }
   );
 
@@ -202,6 +214,23 @@ export async function getMyReservations(): Promise<Reservation[]> {
   return response.data;
 }
 
+export async function updateMyReservation(
+  reservationId: string,
+  payload: Partial<
+    Pick<ReservationPayload, "date" | "time" | "guests" | "name" | "contact">
+  >
+): Promise<Reservation> {
+  const response = await apiClient.patch<Reservation>(
+    `/api/reservations/${reservationId}`,
+    payload
+  );
+  return response.data;
+}
+
+export async function cancelMyReservation(reservationId: string): Promise<void> {
+  await apiClient.delete(`/api/reservations/${reservationId}`);
+}
+
 export async function updateRestaurantReservation(
   reservationId: string,
   payload: Partial<
@@ -228,6 +257,7 @@ export async function getRestaurantTables(): Promise<RestaurantTable[]> {
 
 export async function createRestaurantTable(payload: {
   name: string;
+  category: TableCategory;
   capacity: string;
 }): Promise<RestaurantTable> {
   const response = await apiClient.post<RestaurantTable>(
@@ -241,6 +271,7 @@ export async function updateRestaurantTable(
   tableId: string,
   payload: {
     name?: string;
+    category?: TableCategory;
     capacity?: string;
     isActive?: boolean;
   }

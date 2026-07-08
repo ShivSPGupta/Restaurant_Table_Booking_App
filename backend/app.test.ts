@@ -99,6 +99,50 @@ async function registerTestRestaurant(email = "owner@greenfork.test") {
   return response.body;
 }
 
+async function registerTestUser(email = "guest@example.test") {
+  const response = await makeRequest<{
+    token: string;
+    user: { id: string; email: string };
+  }>("/api/auth/user/register", "POST", {
+    name: "Asha Sharma",
+    email,
+    password: "securepass123",
+    phone: "9999999999",
+  });
+
+  assert.equal(response.statusCode, 201);
+  assert.ok(response.body);
+
+  return response.body;
+}
+
+async function createTestTable(
+  token: string,
+  name = "Table 1",
+  capacity = 4,
+  category = "PUBLIC"
+) {
+  const response = await makeRequest<{
+    id: string;
+    name: string;
+    capacity: number;
+  }>(
+    "/api/restaurant/tables",
+    "POST",
+    {
+      name,
+      capacity,
+      category,
+    },
+    authHeaders(token)
+  );
+
+  assert.equal(response.statusCode, 201);
+  assert.ok(response.body);
+
+  return response.body;
+}
+
 function authHeaders(token: string) {
   return {
     Authorization: `Bearer ${token}`,
@@ -238,14 +282,20 @@ test("duplicate restaurant register is rejected", async () => {
   );
 });
 
-test("availability is true before a reservation exists", async () => {
+test("availability returns available tables before a reservation exists", async () => {
   const { token } = await registerTestRestaurant();
-  const response = await makeRequest<{ available: boolean; slots: string[] }>(
+  const table = await createTestTable(token);
+  const response = await makeRequest<{
+    available: boolean;
+    slots: string[];
+    tables: { id: string; name: string; capacity: number }[];
+  }>(
     "/api/check-availability",
     "POST",
     {
       date: "2026-07-15",
       time: "19:00",
+      guests: 4,
     },
     authHeaders(token)
   );
@@ -254,6 +304,35 @@ test("availability is true before a reservation exists", async () => {
   assert.ok(response.body);
   assert.equal(response.body.available, true);
   assert.deepEqual(response.body.slots, ["19:00"]);
+  assert.equal(response.body.tables.length, 1);
+  assert.equal(response.body.tables[0].id, table.id);
+});
+
+test("availability can filter tables by category", async () => {
+  const { token } = await registerTestRestaurant();
+  await createTestTable(token, "Couple Nook", 2, "COUPLE");
+  const familyTable = await createTestTable(token, "Family Booth", 6, "FAMILY");
+  const response = await makeRequest<{
+    available: boolean;
+    tables: { id: string; category: string }[];
+  }>(
+    "/api/check-availability",
+    "POST",
+    {
+      date: "2026-07-15",
+      time: "19:00",
+      guests: 4,
+      tableCategory: "FAMILY",
+    },
+    authHeaders(token)
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.ok(response.body);
+  assert.equal(response.body.available, true);
+  assert.equal(response.body.tables.length, 1);
+  assert.equal(response.body.tables[0].id, familyTable.id);
+  assert.equal(response.body.tables[0].category, "FAMILY");
 });
 
 test("reservation endpoints require login", async () => {
@@ -305,7 +384,9 @@ test("duplicate restaurant tables are rejected", async () => {
 
 test("booking a table persists the reservation", async () => {
   const { token, restaurant } = await registerTestRestaurant();
+  const table = await createTestTable(token);
   const booking = {
+    tableId: table.id,
     date: "2026-07-15",
     time: "19:00",
     guests: 4,
@@ -335,10 +416,12 @@ test("booking a table persists the reservation", async () => {
 
 test("restaurant can modify and cancel its reservation", async () => {
   const { token } = await registerTestRestaurant();
+  const table = await createTestTable(token);
   const bookingResponse = await makeRequest<{ id: string; guests: number }>(
     "/api/book-table",
     "POST",
     {
+      tableId: table.id,
       date: "2026-07-15",
       time: "19:00",
       guests: 4,
@@ -381,9 +464,100 @@ test("restaurant can modify and cancel its reservation", async () => {
   assert.equal(reservations.length, 0);
 });
 
+test("user can modify and cancel their own reservation", async () => {
+  const restaurant = await registerTestRestaurant();
+  const table = await createTestTable(restaurant.token, "Family Table", 6);
+  const user = await registerTestUser();
+  const bookingResponse = await makeRequest<{ id: string; guests: number }>(
+    "/api/book-table",
+    "POST",
+    {
+      restaurantId: restaurant.restaurant.id,
+      tableId: table.id,
+      date: "2026-07-15",
+      time: "19:00",
+      guests: 4,
+      name: "Asha",
+      contact: "9999999999",
+    },
+    authHeaders(user.token)
+  );
+
+  assert.equal(bookingResponse.statusCode, 201);
+  assert.ok(bookingResponse.body);
+
+  const updateResponse = await makeRequest<{ guests: number; time: string }>(
+    `/api/reservations/${bookingResponse.body.id}`,
+    "PATCH",
+    {
+      time: "20:00",
+      guests: 5,
+    },
+    authHeaders(user.token)
+  );
+
+  assert.equal(updateResponse.statusCode, 200);
+  assert.ok(updateResponse.body);
+  assert.equal(updateResponse.body.time, "20:00");
+  assert.equal(updateResponse.body.guests, 5);
+
+  const cancelResponse = await makeRequest(
+    `/api/reservations/${bookingResponse.body.id}`,
+    "DELETE",
+    undefined,
+    authHeaders(user.token)
+  );
+
+  assert.equal(cancelResponse.statusCode, 204);
+
+  const reservations = JSON.parse(
+    fs.readFileSync(path.join(tempDir, "reservations.json"), "utf8")
+  );
+  assert.equal(reservations.length, 0);
+});
+
+test("user cannot modify another user's reservation", async () => {
+  const restaurant = await registerTestRestaurant();
+  const table = await createTestTable(restaurant.token);
+  const firstUser = await registerTestUser("first@example.test");
+  const secondUser = await registerTestUser("second@example.test");
+  const bookingResponse = await makeRequest<{ id: string }>(
+    "/api/book-table",
+    "POST",
+    {
+      restaurantId: restaurant.restaurant.id,
+      tableId: table.id,
+      date: "2026-07-15",
+      time: "19:00",
+      guests: 4,
+      name: "Asha",
+      contact: "9999999999",
+    },
+    authHeaders(firstUser.token)
+  );
+
+  assert.equal(bookingResponse.statusCode, 201);
+  assert.ok(bookingResponse.body);
+
+  const updateResponse = await makeRequest<{ error: string }>(
+    `/api/reservations/${bookingResponse.body.id}`,
+    "PATCH",
+    {
+      time: "20:00",
+    },
+    authHeaders(secondUser.token)
+  );
+
+  assert.equal(updateResponse.statusCode, 404);
+  assert.ok(updateResponse.body);
+  assert.equal(updateResponse.body.error, "Reservation not found.");
+});
+
 test("duplicate bookings are rejected", async () => {
   const { token } = await registerTestRestaurant();
+  const table = await createTestTable(token);
   const booking = {
+    tableId: table.id,
     date: "2026-07-15",
     time: "19:00",
     guests: 4,
@@ -401,12 +575,16 @@ test("duplicate bookings are rejected", async () => {
 
   assert.equal(response.statusCode, 409);
   assert.ok(response.body);
-  assert.equal(response.body.error, "This time slot is already booked.");
+  assert.equal(
+    response.body.error,
+    "This table is already booked for the selected time."
+  );
 });
 
-test("different restaurants can book the same time slot independently", async () => {
+test("different tables can book the same time slot independently", async () => {
   const firstRestaurant = await registerTestRestaurant("first@greenfork.test");
-  const secondRestaurant = await registerTestRestaurant("second@greenfork.test");
+  const firstTable = await createTestTable(firstRestaurant.token, "Window", 4);
+  const secondTable = await createTestTable(firstRestaurant.token, "Patio", 4);
   const booking = {
     date: "2026-07-15",
     time: "19:00",
@@ -418,14 +596,20 @@ test("different restaurants can book the same time slot independently", async ()
   const firstResponse = await makeRequest(
     "/api/book-table",
     "POST",
-    booking,
+    {
+      ...booking,
+      tableId: firstTable.id,
+    },
     authHeaders(firstRestaurant.token)
   );
   const secondResponse = await makeRequest(
     "/api/book-table",
     "POST",
-    booking,
-    authHeaders(secondRestaurant.token)
+    {
+      ...booking,
+      tableId: secondTable.id,
+    },
+    authHeaders(firstRestaurant.token)
   );
 
   assert.equal(firstResponse.statusCode, 201);

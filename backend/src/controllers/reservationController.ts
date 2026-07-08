@@ -1,4 +1,5 @@
 import type { RequestHandler } from "express";
+import AppError from "../errors/AppError";
 import type { AuthenticatedRequest } from "../middleware/requireRestaurantAuth";
 import type createReservationService from "../services/reservationService";
 
@@ -54,10 +55,51 @@ function createReservationController(reservationService: ReservationService) {
     }
   };
 
+  const updateMyReservation: RequestHandler = async (req, res, next) => {
+    try {
+      const { authRole, userId } = req as AuthenticatedRequest;
+
+      if (authRole !== "user") {
+        throw new AppError("User login is required.", 403);
+      }
+
+      const reservation = await reservationService.updateUserReservation(
+        userId as string,
+        req.params.reservationId as string,
+        req.body
+      );
+
+      res.json(reservation);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  const cancelMyReservation: RequestHandler = async (req, res, next) => {
+    try {
+      const { authRole, userId } = req as AuthenticatedRequest;
+
+      if (authRole !== "user") {
+        throw new AppError("User login is required.", 403);
+      }
+
+      await reservationService.cancelUserReservation(
+        userId as string,
+        req.params.reservationId as string
+      );
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
+
   return {
     checkAvailability,
     createReservation,
     listMyReservations,
+    updateMyReservation,
+    cancelMyReservation,
   };
 }
 

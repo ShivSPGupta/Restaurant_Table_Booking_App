@@ -17,6 +17,7 @@ import {
   type EventSpace,
   type Reservation,
   type RestaurantTable,
+  type TableCategory,
 } from "@/lib/api";
 import {
   getStoredAuthSession,
@@ -26,6 +27,7 @@ import {
 
 const initialTableForm = {
   name: "",
+  category: "PUBLIC" as TableCategory,
   capacity: "",
 };
 
@@ -78,6 +80,10 @@ function isValidTableForm(tableForm: typeof initialTableForm): boolean {
   );
 }
 
+function formatTableCategory(category: TableCategory): string {
+  return category.charAt(0) + category.slice(1).toLowerCase();
+}
+
 export default function RestaurantManagementPanel() {
   const authSession = useSyncExternalStore(
     subscribeToAuthSessionChanges,
@@ -125,11 +131,15 @@ export default function RestaurantManagementPanel() {
     return null;
   }
 
-  const handleTableChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleTableChange = (
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setTableForm({ ...tableForm, [event.target.name]: event.target.value });
   };
 
-  const handleTableEditChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleTableEditChange = (
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setTableEditForm({
       ...tableEditForm,
       [event.target.name]: event.target.value,
@@ -185,6 +195,7 @@ export default function RestaurantManagementPanel() {
     setEditingTableId(table.id);
     setTableEditForm({
       name: table.name,
+      category: table.category,
       capacity: String(table.capacity),
     });
     setStatusMessage("");
@@ -374,6 +385,18 @@ export default function RestaurantManagementPanel() {
             required
             className="booking-input"
           />
+          <select
+            aria-label="Table category"
+            name="category"
+            value={tableForm.category}
+            onChange={handleTableChange}
+            className="booking-input"
+          >
+            <option value="PUBLIC">Public table</option>
+            <option value="COUPLE">Couple table</option>
+            <option value="FAMILY">Family table</option>
+            <option value="SPECIAL">Special table</option>
+          </select>
           <input
             aria-label="Table capacity"
             name="capacity"
@@ -581,6 +604,18 @@ export default function RestaurantManagementPanel() {
                       placeholder="Table name"
                       required
                     />
+                    <select
+                      aria-label="Edit table category"
+                      name="category"
+                      value={tableEditForm.category}
+                      onChange={handleTableEditChange}
+                      className="booking-input"
+                    >
+                      <option value="PUBLIC">Public table</option>
+                      <option value="COUPLE">Couple table</option>
+                      <option value="FAMILY">Family table</option>
+                      <option value="SPECIAL">Special table</option>
+                    </select>
                     <input
                       aria-label="Edit table capacity"
                       name="capacity"
@@ -614,6 +649,9 @@ export default function RestaurantManagementPanel() {
                         </p>
                         <p className="mt-1 text-sm text-[#5f493a]">
                           {table.capacity} seats
+                        </p>
+                        <p className="mt-1 text-xs font-black uppercase tracking-[0.12em] text-[#a85d29]">
+                          {formatTableCategory(table.category)}
                         </p>
                       </div>
                       <span

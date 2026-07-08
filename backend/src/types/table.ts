@@ -1,7 +1,10 @@
+export type TableCategory = "PUBLIC" | "COUPLE" | "FAMILY" | "SPECIAL";
+
 export type RestaurantTable = {
   id: string;
   restaurantId: string;
   name: string;
+  category: TableCategory;
   capacity: number;
   isActive: boolean;
   createdAt: string;
@@ -9,6 +12,7 @@ export type RestaurantTable = {
 
 export type TableRequest = {
   name?: string;
+  category?: TableCategory;
   capacity?: number | string;
   isActive?: boolean;
 };
@@ -23,6 +27,6 @@ export type TableRepository = {
   update: (
     restaurantId: string,
     tableId: string,
-    updates: Partial<Pick<RestaurantTable, "name" | "capacity" | "isActive">>
+    updates: Partial<Pick<RestaurantTable, "name" | "category" | "capacity" | "isActive">>
   ) => Promise<RestaurantTable | null | undefined> | RestaurantTable | null | undefined;
 };

@@ -4,6 +4,9 @@ import type { EventSpace, EventSpaceRepository, EventSpaceRequest } from "../typ
 import type { RestaurantRepository } from "../types/restaurant";
 import type { ReservationRepository } from "../types/reservation";
 import type { RestaurantTable, TableRepository, TableRequest } from "../types/table";
+import type { TableCategory } from "../types/table";
+
+const tableCategories = ["PUBLIC", "COUPLE", "FAMILY", "SPECIAL"] as const;
 
 function isValidTime(value: string): boolean {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
@@ -11,6 +14,18 @@ function isValidTime(value: string): boolean {
 
 function normalizeTableName(name: string): string {
   return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function normalizeTableCategory(category?: TableCategory): TableCategory {
+  if (!category) {
+    return "PUBLIC";
+  }
+
+  if (!tableCategories.includes(category)) {
+    throw new AppError("Select a valid table category.", 400);
+  }
+
+  return category;
 }
 
 function createRestaurantManagementService(
@@ -48,10 +63,6 @@ function createRestaurantManagementService(
 
     const updates: Parameters<typeof reservationRepository.update>[2] = {};
 
-    if (payload.tableId !== undefined) {
-      updates.tableId = payload.tableId || null;
-    }
-
     if (payload.date !== undefined) {
       const date = payload.date.trim();
       if (!date) {
@@ -76,6 +87,26 @@ function createRestaurantManagementService(
       updates.guests = guests;
     }
 
+    if (payload.tableId !== undefined) {
+      const tableId = payload.tableId || null;
+
+      if (tableId) {
+        const tables = await tableRepository.findByRestaurantId(restaurantId);
+        const selectedTable = tables.find((table) => table.id === tableId);
+        const nextGuests = updates.guests || currentReservation.guests;
+
+        if (!selectedTable || !selectedTable.isActive) {
+          throw new AppError("Select an available restaurant table.", 400);
+        }
+
+        if (selectedTable.capacity < nextGuests) {
+          throw new AppError("Selected table does not have enough seats.", 400);
+        }
+      }
+
+      updates.tableId = tableId;
+    }
+
     if (payload.name !== undefined) {
       const name = payload.name.trim();
       if (!name) {
@@ -94,10 +125,19 @@ function createRestaurantManagementService(
 
     const nextDate = updates.date || currentReservation.date;
     const nextTime = updates.time || currentReservation.time;
+    const nextTableId =
+      updates.tableId !== undefined
+        ? updates.tableId
+        : currentReservation.tableId;
 
-    if (nextDate !== currentReservation.date || nextTime !== currentReservation.time) {
-      const duplicateReservation = await reservationRepository.findByDateTime(
-        restaurantId,
+    if (
+      nextTableId &&
+      (nextDate !== currentReservation.date ||
+        nextTime !== currentReservation.time ||
+        nextTableId !== currentReservation.tableId)
+    ) {
+      const duplicateReservation = await reservationRepository.findByTableDateTime(
+        nextTableId,
         nextDate,
         nextTime
       );
@@ -166,6 +206,7 @@ function createRestaurantManagementService(
       id: crypto.randomUUID(),
       restaurantId,
       name,
+      category: normalizeTableCategory(payload.category),
       capacity,
       isActive: payload.isActive ?? true,
       createdAt: new Date().toISOString(),
@@ -177,7 +218,7 @@ function createRestaurantManagementService(
     tableId: string,
     payload: TableRequest
   ) {
-    const updates: Partial<Pick<RestaurantTable, "name" | "capacity" | "isActive">> = {};
+    const updates: Partial<Pick<RestaurantTable, "name" | "category" | "capacity" | "isActive">> = {};
 
     if (payload.name !== undefined) {
       updates.name = payload.name.trim();
@@ -204,6 +245,10 @@ function createRestaurantManagementService(
         throw new AppError("Capacity must be a whole number greater than 0.", 400);
       }
       updates.capacity = capacity;
+    }
+
+    if (payload.category !== undefined) {
+      updates.category = normalizeTableCategory(payload.category);
     }
 
     if (payload.isActive !== undefined) {
